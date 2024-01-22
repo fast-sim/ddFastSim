@@ -1,0 +1,64 @@
+stages:
+  - build
+  - test
+
+variables:
+  # Base path for an environment
+  KEY4HEP_SETUP: /cvmfs/sw.hsf.org/key4hep/setup.sh
+
+build-ddfastsim:
+  tags:
+    - k8s-cvmfs
+  stage: build
+  artifacts:
+    paths:
+      - install
+  script:
+    - dnf update -y && dnf groupinstall -y "Development Tools"&& dnf install -y mesa-libGL mesa-libGL-devel mesa-libGLU mesa-libGLU-devel
+    - set +e && source ${KEY4HEP_SETUP}; set -e
+    - mkdir build install && cd build
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../install
+    - make install
+
+run-ddfastsim:
+  tags:
+    - k8s-cvmfs
+  stage: test
+  needs:
+    - build-ddfastsim
+  artifacts:
+    paths:
+      - test
+    expire_in: 1 month
+    when: always
+  script:
+    - dnf update -y && dnf groupinstall -y "Development Tools"&& dnf install -y mesa-libGL mesa-libGL-devel mesa-libGLU mesa-libGLU-devel
+    - mkdir test && cd test
+    - source ../install/bin/thisDDFastSim.sh
+    - source ${KEY4HEP_SETUP}
+    - ddsim --steeringFile ../install/options/Par04/Par04_ddsim_steer.py --gun.energy 1*GeV --gun.part gamma --numberOfEvents 100 --compactFile ../install/Detector/xml/Par04_fullsim.xml --macroFile ../install/options/Par04/macro.mac --outputFile ddsim_Par04_gamma_100events_1GeV_edm4hep.root
+
+run-plots:
+  tags:
+    - k8s-cvmfs
+  stage: test
+  needs:
+    - run-ddfastsim
+  artifacts:
+    paths:
+      - test/plots
+    expire_in: 1 month
+    when: always
+  script:
+    - dnf update -y && dnf groupinstall -y "Development Tools"&& dnf install -y mesa-libGL mesa-libGL-devel mesa-libGLU mesa-libGLU-devel python numpy
+    - echo $PATH
+    - echo $PYTHONPATH
+    - mkdir -p test/plots && cd test/plots
+    - source ${KEY4HEP_SETUP}
+    - python -c "import numpy; print(numpy.__version__)"
+    - python ../../scripts/draw_all.py --infileEdm4hep ../ddsim_Par04_gamma_100events_1GeV_edm4hep.root --plotLong --dataset 3
+    - python ../../scripts/draw_all.py --infileEdm4hep ../ddsim_Par04_gamma_100events_1GeV_edm4hep.root --plotTrans --dataset 3
+    - python ../../scripts/draw_all.py --infileEdm4hep ../ddsim_Par04_gamma_100events_1GeV_edm4hep.root --plotEratio --dataset 3
+    - python ../../scripts/draw_all.py --infileEdm4hep ../ddsim_Par04_gamma_100events_1GeV_edm4hep.root --plotIncident --dataset 3
+    - python ../../scripts/draw_all.py --infileEdm4hep ../ddsim_Par04_gamma_100events_1GeV_edm4hep.root --plotLogEcell --dataset 3
+
