@@ -9,7 +9,7 @@ It demonstrates how to define a very simple fast shower model and how to attach 
 
 Get all needed packages (Geant4, DD4hep), e.g. from:
 ```
-source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh
+source /cvmfs/sw.hsf.org/key4hep/setup.sh
 ```
 
 Then compile this library that contains few plugins for DDG4 simulation:
@@ -17,5 +17,5 @@ Then compile this library that contains few plugins for DDG4 simulation:
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=../install
 make install
-source ../install/bin/this_ddodd.sh
+source ../install/bin/thisDDFastSim.sh
 ```
