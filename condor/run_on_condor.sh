@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### First some configuration settings that need to changed for each user
-FCCcore=/afs/cern.ch/work/a/azaborow/FCC/
+export FCCcore=/afs/cern.ch/work/a/azaborow/FCC/
 OUTPATH=/eos/geant4/fastSim/ddodd/Par04/test/
 ###
 

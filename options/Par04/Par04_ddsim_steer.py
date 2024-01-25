@@ -16,6 +16,7 @@ SIM = DD4hepSimulation()
 ## The compact XML file
 if "FCCcore" in os.environ:
    SIM.compactFile = os.environ["FCCcore"]+"/ddfastsim/install/Detector/xml/Par04_fullsim.xml"
+   print(f"Detector: {os.environ['FCCcore']}/ddfastsim/install/Detector/xml/Par04_fullsim.xml")
 ## Lorentz boost for the crossing angle, in radian!
 SIM.enableDetailedShowerMode = False
 SIM.enableG4GPS = False
@@ -26,6 +27,7 @@ SIM.enableGun = True
 ## Macro file to execute for runType 'run' or 'vis'
 if "FCCcore" in os.environ:
    SIM.macroFile = os.environ["FCCcore"]+"/ddfastsim/options/Par04/macro.mac"
+   print(f"Detector: {os.environ['FCCcore']}/ddfastsim/options/Par04/macro.mac")
 ## number of events to simulate, used in batch mode
 SIM.numberOfEvents = 100
 ## Outputfile from the simulation,only lcio output is supported
