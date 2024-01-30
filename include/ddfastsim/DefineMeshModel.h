@@ -35,7 +35,6 @@ class DefineMeshModel :  public dd4hep::sim::Geant4FastSimShowerModel
  /// Geometry construction callback. Called at "Construct()"
     virtual void constructGeo(dd4hep::sim::Geant4DetectorConstructionContext* ctxt)  override {
       // if( fastsimML.has_constructGeo )      fastsimML.constructGeo( ctxt ) ;
-      // else
       this->Geant4FastSimShowerModel::constructGeo(ctxt);
 
     }
@@ -43,14 +42,12 @@ class DefineMeshModel :  public dd4hep::sim::Geant4FastSimShowerModel
     /// Electromagnetic field construction callback. Called at "ConstructSDandField()"
     virtual void constructField(dd4hep::sim::Geant4DetectorConstructionContext* ctxt)  override {
       // if( fastsimML.has_constructField )      fastsimML.constructField( ctxt ) ;
-      // else
       this->Geant4FastSimShowerModel::constructField(ctxt);
     }
 
     /// Sensitive detector construction callback. Called at "ConstructSDandField()"
     virtual void constructSensitives(dd4hep::sim::Geant4DetectorConstructionContext* ctxt)  override {
       // if( fastsimML.has_constructSensitives )      fastsimML.constructSensitives( ctxt ) ;
-      // else
       this->Geant4FastSimShowerModel::constructSensitives(ctxt);
     }
 
@@ -59,7 +56,7 @@ class DefineMeshModel :  public dd4hep::sim::Geant4FastSimShowerModel
      */
     virtual bool check_applicability(const G4ParticleDefinition& particle)  override {
       // if( fastsimML.has_check_applicability )   return  fastsimML.check_applicability(particle) ;
-      // else
+      /// this model can be used with all particles
       return true;
     }
 
