@@ -110,6 +110,9 @@ for file_root in filename_root:
     print(sum(events_list[-1]['EnergyCell'][0]))
     print(len(events_list[-1]['EnergyMC']))
     print((events_list[-1]['EnergyMC'][0]))
+    # Plain ROOT files come from Par04 which so far has no implementation of phi/theta
+    found_angle_theta = False
+    found_angle_phi = False
 
 for file_edm4hep in filename_edm4hep:
     df = RDataFrame("events", file_edm4hep).Range(num_events)
@@ -127,7 +130,8 @@ for file_edm4hep in filename_edm4hep:
     print(sum(events_list[-1]['EnergyCell'][0]))
     print(len(events_list[-1]['EnergyMC']))
     print((events_list[-1]['EnergyMC'][0]))
-
+    found_angle_theta = True
+    found_angle_phi = True
 
 #hdf5 files
 h5_eMC_list = []
@@ -138,14 +142,14 @@ for file_h5 in filename_h5:
     data = h5py.File(file_h5)
     randomIndices=random.sample(range(0,data[list(data.keys())[0]].shape[0]),num_events)
     h5_eMC_list.append(np.array([ data['incident_energy'][i] for i in randomIndices ]))
-    found_h5_angle_theta = False
-    found_h5_angle_phi = False
+    found_angle_theta = False
+    found_angle_phi = False
     if "incident_theta" in data.keys():
         h5_thetaMC_list.append(np.array([ data['incident_theta'][i] for i in randomIndices ]))
-        found_h5_angle_theta = True
+        found_angle_theta = True
     if "incident_phi" in data.keys():
         h5_phiMC_list.append(np.array([ data['incident_phi'][i] for i in randomIndices ]))
-        found_h5_angle_phi = True
+        found_angle_phi = True
     h5_showers_list.append(np.array([ data['showers'][i] for i in randomIndices ]))
 
 def energy_ratio_root(fig, events, colour, label):
@@ -598,7 +602,7 @@ def plot_incident():
             axEr.scatter(edges_of_bins_E[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
         axEr.legend()
         axEr.set_ylim(0.25,4)
-    if found_h5_angle_theta:
+    if found_angle_theta:
         #theta distribution
         for it in range(len(events_list)):
             (vals, edges, _) = axT.hist(events_list[it]["ThetaMC"], bins = np.linspace(0,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
@@ -629,7 +633,7 @@ def plot_incident():
                 axTr.scatter(edges_of_bins_T[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
             axTr.legend()
             axTr.set_ylim(0.25,4)
-    if found_h5_angle_phi:
+    if found_angle_phi:
         #phi distribution
         for it in range(len(events_list)):
             (vals, edges, _) = axP.hist(events_list[it]["PhiMC"], bins = np.linspace(-pi,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
