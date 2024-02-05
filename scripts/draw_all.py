@@ -1,4 +1,9 @@
-from ROOT import RDataFrame
+root_not_found=False
+try:
+    from ROOT import RDataFrame
+except ModuleNotFoundError:
+    root_not_found=True
+    pass
 import h5py
 import random
 import numpy as np
@@ -25,7 +30,8 @@ parser.add_argument('--legendH5',nargs='+',default=[""])
 parser.add_argument('--samplingFraction', type=float, default=1., help="Sampling fraction to use to rescale energy of ROOT or EDM4hep files. No change is done to H5 files. Defined as f=active/(active+absorber). Used only for eratio and logEcell plots.")
 parser.add_argument('--energyFilter', type=float, nargs=2, required=False)
 parser.add_argument('--axisRange', type=float, nargs=2, required=False)
-parser.add_argument('-n', '--ncpus', type=int, default=4, help='Number of CPUs to use in analysis')
+parser.add_argument('--ncpus', type=int, default=4, help='Number of CPUs to use in analysis')
+parser.add_argument('-n', '--numEvents', type=int, default=100, help='Number of events to plot')
 args = parser.parse_args()
 
 # files
@@ -35,9 +41,14 @@ if not args.infileRoot:
 filename_edm4hep = args.infileEdm4hep
 if not args.infileEdm4hep:
     filename_edm4hep = []
+if len(filename_root)+len(filename_edm4hep) > 0 and root_not_found:
+    print("ROOT is needed to analyse ROOT files (plain root or edm4hep root)")
+    sys.exit(1)
 filename_h5 = args.infileH5
 if not args.infileH5:
     filename_h5 = []
+
+num_events = args.numEvents
 # datasets
 if args.dataset == 2:
     legend_root = ['ROOT, dataset2']
@@ -70,7 +81,7 @@ if len(legend_root) < len(filename_root) + len(filename_edm4hep):
     else:
         for i in range(len(filename_root)+len(filename_edm4hep)):
             legend_root.append(legend_root[0])
-if len(legend_root) < len(filename_h5):
+if len(legend_h5) < len(filename_h5):
     if args.legend:
         print("Use the same length for legend and files")
         exit(-1)
@@ -84,13 +95,13 @@ df_list = []
 events_list = []
 for file_root in filename_root:
     if args.energyFilter:
-        filtered = df.Filter(f"MCParticles.momentum > {args.energyFilter[0]} && EnergyMC < {args.energyFilter[1]}").Range(1000)
+        filtered = df.Filter(f"MCParticles.momentum > {args.energyFilter[0]} && EnergyMC < {args.energyFilter[1]}").Range(num_events)
         df_list.append(filtered)
         events_list.append(df_list[-1].AsNumpy(columns=["EnergyCell", "rhoCell", "zCell", "phiCell"]))
         print(f"Filtered number of events: {filtered.Count().GetValue()}")
     else:
-        df = RDataFrame("virtualReadout", file_root).Range(1000)
-        df2 = RDataFrame("global", file_root).Range(1000)
+        df = RDataFrame("virtualReadout", file_root).Range(num_events)
+        df2 = RDataFrame("global", file_root).Range(num_events)
         df_list.append(df)
         df_list.append(df2)
         events_list.append(df_list[-2].AsNumpy(columns=["EnergyCell", "rhoCell", "zCell", "phiCell"]))
@@ -101,7 +112,7 @@ for file_root in filename_root:
     print((events_list[-1]['EnergyMC'][0]))
 
 for file_edm4hep in filename_edm4hep:
-    df = RDataFrame("events", file_edm4hep).Range(1000)
+    df = RDataFrame("events", file_edm4hep).Range(num_events)
     df_list.append(df.Define("EnergyCell","ROOT::VecOps::RVec<float> result; for (auto&p: ECalBarrelCollection) {result.push_back(p.energy);} return result;")\
     .Define("rhoCell","ROOT::VecOps::RVec<float> result; for (auto&p: ECalBarrelCollection) {result.push_back(p.position.x);} return result;")\
     .Define("zCell","ROOT::VecOps::RVec<float> result; for (auto&p: ECalBarrelCollection) {result.push_back(p.position.z);} return result;")\
@@ -125,10 +136,16 @@ h5_phiMC_list = []
 h5_showers_list = []
 for file_h5 in filename_h5:
     data = h5py.File(file_h5)
-    randomIndices=range(0,1000)#random.sample(range(0,data[list(data.keys())[0]].shape[0]),1000)
+    randomIndices=random.sample(range(0,data[list(data.keys())[0]].shape[0]),num_events)
     h5_eMC_list.append(np.array([ data['incident_energy'][i] for i in randomIndices ]))
-    h5_thetaMC_list.append(np.array([ data['incident_theta'][i] for i in randomIndices ]))
-    h5_phiMC_list.append(np.array([ data['incident_phi'][i] for i in randomIndices ]))
+    found_h5_angle_theta = False
+    found_h5_angle_phi = False
+    if "incident_theta" in data.keys():
+        h5_thetaMC_list.append(np.array([ data['incident_theta'][i] for i in randomIndices ]))
+        found_h5_angle_theta = True
+    if "incident_phi" in data.keys():
+        h5_phiMC_list.append(np.array([ data['incident_phi'][i] for i in randomIndices ]))
+        found_h5_angle_phi = True
     h5_showers_list.append(np.array([ data['showers'][i] for i in randomIndices ]))
 
 def energy_ratio_root(fig, events, colour, label):
@@ -581,66 +598,68 @@ def plot_incident():
             axEr.scatter(edges_of_bins_E[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
         axEr.legend()
         axEr.set_ylim(0.25,4)
-    #theta distribution
-    for it in range(len(events_list)):
-        (vals, edges, _) = axT.hist(events_list[it]["ThetaMC"], bins = np.linspace(0,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
-        val_of_bins_T.append(vals)
-        edges_of_bins_T.append(edges)
-    for it in range(len(h5_thetaMC_list)):
-        (vals, edges, _) = axT.hist(h5_thetaMC_list[it], bins = np.linspace(0,pi,100), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
-        val_of_bins_T.append(vals)
-        edges_of_bins_T.append(edges)
-    axT.set_xlabel('${\theta}_{MC}$ (rad)')
-    axT.set_ylim(bottom=1)
-    axT.set_yscale('log')
-    axT.set_ylabel('Entries')
-    axT.set_title('Incident energy distribution')
-    axT.grid(True)
-    axT.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
-        axTr.set_ylabel('ratio')
-        bincenter = 0.5 * (edges_of_bins_T[0][1:] + edges_of_bins_T[0][:-1])
-        for it in range(1,len(events_list)+len(h5_eMC_list)):
-            if it < len(events_list):
-                current_legend = legend_root[it]
-            else:
-                current_legend = legend_h5[it-len(events_list)]
-            ratio = np.zeros(len(val_of_bins_T[0]))
-            ratio = np.divide(val_of_bins_T[it], val_of_bins_T[0], out=ratio,where=(val_of_bins_T[0] != 0))
-            error = np.divide(val_of_bins_T[it] * np.sqrt(val_of_bins_T[0]) + val_of_bins_T[0] * np.sqrt(val_of_bins_T[it]),np.power(val_of_bins_T[0], 2), where=(val_of_bins_T[0] != 0))
-            axTr.scatter(edges_of_bins_T[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
-        axTr.legend()
-        axTr.set_ylim(0.25,4)
-    #phi distribution
-    for it in range(len(events_list)):
-        (vals, edges, _) = axP.hist(events_list[it]["PhiMC"], bins = np.linspace(-pi,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
-        val_of_bins_P.append(vals)
-        edges_of_bins_P.append(edges)
-    for it in range(len(h5_phiMC_list)):
-        (vals, edges, _) = axP.hist(h5_phiMC_list[it], bins = np.linspace(-pi,pi,100), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
-        val_of_bins_P.append(vals)
-        edges_of_bins_P.append(edges)
-    axP.set_xlabel('$\phi_{MC}$ (rad)')
-    axP.set_ylim(bottom=1)
-    axP.set_yscale('log')
-    axP.set_ylabel('Entries')
-    axP.set_title('Incident energy distribution')
-    axP.grid(True)
-    axP.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
-        axPr.set_ylabel('ratio')
-        bincenter = 0.5 * (edges_of_bins_P[0][1:] + edges_of_bins_P[0][:-1])
-        for it in range(1,len(events_list)+len(h5_eMC_list)):
-            if it < len(events_list):
-                current_legend = legend_root[it]
-            else:
-                current_legend = legend_h5[it-len(events_list)]
-            ratio = np.zeros(len(val_of_bins_P[0]))
-            np.divide(val_of_bins_P[it], val_of_bins_P[0], out=ratio, where=(val_of_bins_P[0] != 0))
-            error = np.divide(val_of_bins_P[it] * np.sqrt(val_of_bins_P[0]) + val_of_bins_P[0] * np.sqrt(val_of_bins_P[it]),np.power(val_of_bins_P[0], 2), where=(val_of_bins_P[0] != 0))
-            axPr.scatter(edges_of_bins_P[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
-        axPr.legend()
-        axPr.set_ylim(0.25,4)
+    if found_h5_angle_theta:
+        #theta distribution
+        for it in range(len(events_list)):
+            (vals, edges, _) = axT.hist(events_list[it]["ThetaMC"], bins = np.linspace(0,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
+            val_of_bins_T.append(vals)
+            edges_of_bins_T.append(edges)
+        for it in range(len(h5_thetaMC_list)):
+            (vals, edges, _) = axT.hist(h5_thetaMC_list[it], bins = np.linspace(0,pi,100), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
+            val_of_bins_T.append(vals)
+            edges_of_bins_T.append(edges)
+        axT.set_xlabel('${\theta}_{MC}$ (rad)')
+        axT.set_ylim(bottom=1)
+        axT.set_yscale('log')
+        axT.set_ylabel('Entries')
+        axT.set_title('Incident energy distribution')
+        axT.grid(True)
+        axT.legend()
+        if len(events_list)+len(h5_eMC_list) > 1:
+            axTr.set_ylabel('ratio')
+            bincenter = 0.5 * (edges_of_bins_T[0][1:] + edges_of_bins_T[0][:-1])
+            for it in range(1,len(events_list)+len(h5_eMC_list)):
+                if it < len(events_list):
+                    current_legend = legend_root[it]
+                else:
+                    current_legend = legend_h5[it-len(events_list)]
+                ratio = np.zeros(len(val_of_bins_T[0]))
+                ratio = np.divide(val_of_bins_T[it], val_of_bins_T[0], out=ratio,where=(val_of_bins_T[0] != 0))
+                error = np.divide(val_of_bins_T[it] * np.sqrt(val_of_bins_T[0]) + val_of_bins_T[0] * np.sqrt(val_of_bins_T[it]),np.power(val_of_bins_T[0], 2), where=(val_of_bins_T[0] != 0))
+                axTr.scatter(edges_of_bins_T[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
+            axTr.legend()
+            axTr.set_ylim(0.25,4)
+    if found_h5_angle_phi:
+        #phi distribution
+        for it in range(len(events_list)):
+            (vals, edges, _) = axP.hist(events_list[it]["PhiMC"], bins = np.linspace(-pi,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
+            val_of_bins_P.append(vals)
+            edges_of_bins_P.append(edges)
+        for it in range(len(h5_phiMC_list)):
+            (vals, edges, _) = axP.hist(h5_phiMC_list[it], bins = np.linspace(-pi,pi,100), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
+            val_of_bins_P.append(vals)
+            edges_of_bins_P.append(edges)
+        axP.set_xlabel('$\phi_{MC}$ (rad)')
+        axP.set_ylim(bottom=1)
+        axP.set_yscale('log')
+        axP.set_ylabel('Entries')
+        axP.set_title('Incident energy distribution')
+        axP.grid(True)
+        axP.legend()
+        if len(events_list)+len(h5_eMC_list) > 1:
+            axPr.set_ylabel('ratio')
+            bincenter = 0.5 * (edges_of_bins_P[0][1:] + edges_of_bins_P[0][:-1])
+            for it in range(1,len(events_list)+len(h5_eMC_list)):
+                if it < len(events_list):
+                    current_legend = legend_root[it]
+                else:
+                    current_legend = legend_h5[it-len(events_list)]
+                ratio = np.zeros(len(val_of_bins_P[0]))
+                np.divide(val_of_bins_P[it], val_of_bins_P[0], out=ratio, where=(val_of_bins_P[0] != 0))
+                error = np.divide(val_of_bins_P[it] * np.sqrt(val_of_bins_P[0]) + val_of_bins_P[0] * np.sqrt(val_of_bins_P[it]),np.power(val_of_bins_P[0], 2), where=(val_of_bins_P[0] != 0))
+                axPr.scatter(edges_of_bins_P[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
+            axPr.legend()
+            axPr.set_ylim(0.25,4)
     fig.tight_layout()
     fig.savefig(args.outfile+'incident_distr')
 
