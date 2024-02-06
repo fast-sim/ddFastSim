@@ -30,7 +30,7 @@ dd4hep::sim::ScoreMeshEventAction::ScoreMeshEventAction(dd4hep::sim::Geant4Conte
 void dd4hep::sim::ScoreMeshEventAction::begin(const G4Event* aEvent)
 {
   fTimer.Start();
-  fCellNbPhi  = 2 * CLHEP::pi / fCellSizePhi;
+  fCellNbPhi  = ceil(2 * CLHEP::pi / fCellSizePhi);
   fCalEdep.reserve(fCellNbRho * fCellNbPhi * fCellNbZ);
   fCalRho.reserve(fCellNbRho * fCellNbPhi * fCellNbZ);
   fCalPhi.reserve(fCellNbRho * fCellNbPhi * fCellNbZ);
