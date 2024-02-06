@@ -19,20 +19,20 @@ if "FCCcore" in os.environ:
    print(f"Detector: {os.environ['FCCcore']}/ddfastsim/install/Detector/xml/Par04_fullsim.xml")
 ## Lorentz boost for the crossing angle, in radian!
 SIM.enableDetailedShowerMode = False
-SIM.enableG4GPS = False
+SIM.enableG4GPS = True
 SIM.enableG4Gun = False
-SIM.enableGun = True
+SIM.enableGun = False
 ## InputFiles for simulation .stdhep, .slcio, .HEPEvt, .hepevt, .hepmc, .pairs files are supported
 #SIM.inputFiles = [""]
 ## Macro file to execute for runType 'run' or 'vis'
 if "FCCcore" in os.environ:
-   SIM.macroFile = os.environ["FCCcore"]+"/ddfastsim/options/Par04/macro.mac"
-   print(f"Detector: {os.environ['FCCcore']}/ddfastsim/options/Par04/macro.mac")
+   SIM.macroFile = os.environ["FCCcore"]+"/ddfastsim/options/Par04/macro_gps.mac"
+   print(f"Detector: {os.environ['FCCcore']}/ddfastsim/options/Par04/macro_gps.mac")
 ## number of events to simulate, used in batch mode
 SIM.numberOfEvents = 100
 ## Outputfile from the simulation,only lcio output is supported
 #SIM.outputFile = "dummyOutput_edm4hep.root" ##"dummyOutput.slcio"
-SIM.outputFile = "singleShower_Par04_highgran_1GeV_100showers_gamma_eta0_phi0_edm4hep.root"
+SIM.outputFile = "singleShower_Par04_highgran_1GeVto1TeVpower_100showers_gamma_thetaUserCone_phiFull_edm4hep.root"
 
 ## Physics list to use in simulation
 SIM.physicsList = None
@@ -200,7 +200,7 @@ SIM.gun.distribution = "uniform"
 ## Total energy (including mass) for the particle gun.
 ##
 ## If not None, it will overwrite the setting of momentumMin and momentumMax
-SIM.gun.energy = 1*GeV
+SIM.gun.energy = 0
 
 ##  isotropic distribution for the particle gun
 ##
@@ -210,10 +210,10 @@ SIM.gun.energy = 1*GeV
 #SIM.gun.isotrop = True
 
 ## Maximal momentum when using distribution (default = 0.0)
-SIM.gun.momentumMax = 10000.0
+SIM.gun.momentumMax = 10*GeV
 
 ## Minimal momentum when using distribution (default = 0.0)
-SIM.gun.momentumMin = 0.0
+SIM.gun.momentumMin = 1*GeV
 SIM.gun.multiplicity = 1
 SIM.gun.particle = "gamma"
 

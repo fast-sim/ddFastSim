@@ -9,12 +9,12 @@ source $FCCcore/ddfastsim/install/bin/thisDDFastSim.sh
 source /cvmfs/sw.hsf.org/key4hep/setup.sh
 
 echo "Steering file ================"
-cat $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer.py
+cat $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_pgun.py
 cat job.$4.$1GeV.N$2.mac
 
 echo "Simulating for energy" $1 " GeV and for " $2 " showers of " $3
 
-ddsim --steeringFile $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer.py --gun.energy $1*GeV --gun.part $3 --numberOfEvents $2 --macroFile job.$4.$1GeV.N$2.mac --outputFile ddsim_mesh_Par04_$4_$2events_$1GeV_edm4hep.root
+ddsim --steeringFile $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_pgun.py --gun.energy $1*GeV --gun.part $3 --numberOfEvents $2 --macroFile job.$4.$1GeV.N$2.mac --outputFile ddsim_mesh_Par04_$4_$2events_$1GeV_edm4hep.root
 
 echo "Copying the output file to " $OUTPATH
 mkdir -p $OUTPATH/
