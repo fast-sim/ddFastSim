@@ -27,10 +27,23 @@ namespace dd4hep {
       Geant4ShowerMeshCalorimeter() : Geant4Calorimeter()
 				//	, _firstLayerNumber(1)
       {}
+      /// Post-event action callback
+      void endEvent(const G4Event* /* event */)   {
+        // reset entrance position
+        entrancePosition.set(-1, -1, -1);
+        entranceDirection.set(-1, -1, -1);      
+      }
     };
     /// Define collections created by this sensitivie action object
     template <> void Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::defineCollections() {
       m_collectionID = defineCollection<Geant4Calorimeter::Hit>(m_sensitive.readout().name());
+    }
+    /// Initialization overload for specialization
+    template <> void Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::initialize() {
+        eventAction().callAtEnd(&m_userData,&Geant4ShowerMeshCalorimeter::endEvent);
+        // reset entrance position
+        m_userData.entrancePosition.set(-1, -1, -1);
+        m_userData.entranceDirection.set(-1, -1, -1);
     }
     /// template specialization for c'tor in order to define property: FirstLayerNumber
     template <> 
