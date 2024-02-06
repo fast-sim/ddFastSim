@@ -18,6 +18,11 @@ if __name__=="__main__":
     if len(args.energy) < 0:
     # exit if something is wrong
         sys.exit("No particle energy for simulation specified")
+    if 0 in args.energy:
+        if len(args.energy) > 1:
+            sys.exit("Energy:=0 means use of GPS, so it cannot be combined with other energies")
+        else:
+            print("Use GPS instead of particle gun")
     print("Number of events: ", args.number)
     known = ['e-', 'e+', 'mu-', 'mu+', 'gamma', 'geantino', 'neutron', 'proton', 'pi-', 'pi+', 'pi0']
     if not args.particle in known:
@@ -41,6 +46,17 @@ if __name__=="__main__":
         fenergy.write('/analysis/setFileName analysis.root\n')
         fenergy.write('/param/ActivateModel DefineMeshModel\n')
         fenergy.write('/param/listModels\n')
+        if energy == 0:
+            fenergy.write(f'/gps/particle {args.particle}\n')
+            fenergy.write('/gps/ene/type Pow\n')
+            fenergy.write('/gps/ene/min 1.0 GeV\n')
+            fenergy.write('/gps/ene/max 1.0 TeV\n')
+            fenergy.write('/gps/ene/alpha -1\n')
+            fenergy.write('/gps/ang/type iso\n')
+            fenergy.write('/gps/ang/mintheta 0.87 rad\n')
+            fenergy.write('/gps/ang/maxtheta 2.27 rad\n')
+            fenergy.write('/gps/ang/minphi 0\n')
+            fenergy.write('/gps/ang/maxphi 6.283 rad\n')
         fenergy.write(f'/run/beamOn {args.number}\n')
         fenergy.close()
 
@@ -49,7 +65,10 @@ if __name__=="__main__":
         # create submition script
         fsub = open('./submit.sub', 'w')
         if args.detector == 'Par04':
-            fsub.write('executable             = run_on_condor.sh\n')
+            if energy == 0:
+                fsub.write('executable             = run_on_condor_gps.sh\n')
+            else:
+                fsub.write('executable             = run_on_condor_pgun.sh\n')
             detname = "Par04"
         fsub.write(f'arguments             = {energy} {args.number} {args.particle} {escapedName} $(ClusterID) $(ProcId)\n')
         fsub.write(f'output                = output/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).$(ProcId).out\n')
