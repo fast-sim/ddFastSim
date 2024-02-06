@@ -36,7 +36,7 @@ run-ddfastsim:
     - mkdir test && cd test
     - source ../install/bin/thisDDFastSim.sh
     - source ${KEY4HEP_SETUP}
-    - ddsim --steeringFile ../install/options/Par04/Par04_ddsim_steer.py --gun.energy 1*GeV --gun.part gamma --numberOfEvents 100 --compactFile ../install/Detector/xml/Par04_fullsim.xml --macroFile ../install/options/Par04/macro.mac --outputFile ddsim_Par04_gamma_100events_1GeV_edm4hep.root
+    - ddsim --steeringFile ../install/options/Par04/Par04_ddsim_steer_pgun.py --gun.energy 1*GeV --gun.part gamma --numberOfEvents 100 --compactFile ../install/Detector/xml/Par04_fullsim.xml --macroFile ../install/options/Par04/macro_pgun.mac --outputFile ddsim_Par04_gamma_100events_1GeV_edm4hep.root
 
 run-plots:
   tags:
