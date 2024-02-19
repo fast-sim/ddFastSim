@@ -21,7 +21,7 @@ ScoreMeshEventInformation::~ScoreMeshEventInformation() = default;
 
 void ScoreMeshEventInformation::Print() const
 {
-  std::cout << "Event information\nPrimary particle direction = " << fDirection
+  std::cout << "[Print] Event information\nPrimary particle direction = " << fDirection
          << "\nPrimary particle position = " << fPosition << std::endl;
 }
 

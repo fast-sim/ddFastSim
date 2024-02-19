@@ -77,9 +77,9 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
   fCalPhi.resize(fCellNbRho * fCellNbPhi * fCellNbZ,0);
   fCalZ.resize(fCellNbRho * fCellNbPhi * fCellNbZ,0);
 
-  std::cout << "Event action: Num of phi x rho x z cells: " << fCellNbPhi << " x "
+  std::cout << "[EventAction::end()] Event action: Num of phi x rho x z cells: " << fCellNbPhi << " x "
             << fCellNbRho << " x " << fCellNbZ << std::endl;
-  std::cout << "Number of hits in a collection: " <<  hitsCollection->GetSize() << std::endl;
+  std::cout << "[EventAction::end()] Number of hits in a collection: " <<  hitsCollection->GetSize() << std::endl;
 
   // Fill histograms
   dd4hep::sim::Geant4Calorimeter::Hit* hit                  = nullptr;

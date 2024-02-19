@@ -31,7 +31,7 @@ namespace dd4hep {
       void endEvent(const G4Event* /* event */)   {
         // reset entrance position
         entrancePosition.set(-1, -1, -1);
-        entranceDirection.set(-1, -1, -1);      
+        entranceDirection.set(-1, -1, -1);
       }
     };
     /// Define collections created by this sensitivie action object
@@ -75,10 +75,10 @@ namespace dd4hep {
           return true;
         m_userData.entrancePosition  = info->GetPosition();
         m_userData.entranceDirection = info->GetDirection();
-        std::cout << "Size of rho SD cell = " << m_userData.sizeOfRhoCells << std::endl;
-        std::cout << "Size of z SD cell = " << m_userData.sizeOfZCells << std::endl;
-        std::cout << "Entrance position = " << m_userData.entrancePosition << std::endl;
-        std::cout << "Entrance direction = " << m_userData.entranceDirection<< std::endl;
+        std::cout << "[SD::process(G4Step), entrance pos x == -1] FOR READOUT " << m_sensitive.readout().name() << " Size of rho SD cell = " << m_userData.sizeOfRhoCells << std::endl;
+        std::cout << "[SD::process(G4Step), entrance pos x == -1] Size of z SD cell = " << m_userData.sizeOfZCells << std::endl;
+        std::cout << "[SD::process(G4Step), entrance pos x == -1] Entrance position = " << m_userData.entrancePosition << std::endl;
+        std::cout << "[SD::process(G4Step), entrance pos x == -1] Entrance direction = " << m_userData.entranceDirection<< std::endl;
       }
 
       auto delta = aStep->GetPostStepPoint()->GetPosition() - m_userData.entrancePosition;
