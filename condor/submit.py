@@ -6,14 +6,17 @@ if __name__=="__main__":
 
     # get additional arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04'], default="Par04")
+    parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'Par04_dataset2'], default="Par04")
     parser.add_argument('--energy', '-e',type=int, nargs="+", help='Energy to simulate (GeV)', required=True)
+    parser.add_argument('--phi',type=float, help='Azimuthal angle (rad) to set if particle gun is used (= energy is non zero)',default=0)
+    parser.add_argument('--theta',type=float, help='Theta angle (rad) to set if particle gun is used (= energy is non zero)',default=1.57)
     parser.add_argument('--number', '-n',type=int, default=1000, help='Number of events to simulate')
     parser.add_argument('--jobs', '-j',type=int, default=1, help='Number of jobs/runs to submit')
     parser.add_argument('--particle', '-p',type=str, default="gamma", help='Name of particle')
     parser.add_argument('--test', '-t', action='store_true', help='If chosen, only config files are created, job is not submitted')
     parser.add_argument('--mail', '-m', help='Send mail about completed job', default="")
     args, _ = parser.parse_known_args()
+    print(args)
 
     if len(args.energy) < 0:
     # exit if something is wrong
@@ -70,12 +73,18 @@ if __name__=="__main__":
             else:
                 fsub.write('executable             = run_on_condor_pgun.sh\n')
             detname = "Par04"
-        fsub.write(f'arguments             = {energy} {args.number} {args.particle} {escapedName} $(ClusterID) $(ProcId)\n')
+        elif args.detector == 'Par04_dataset2':
+            if energy == 0:
+                fsub.write('executable             = run_on_condor_dataset2_gps.sh\n')
+            else:
+                fsub.write('executable             = run_on_condor_dataset2_pgun.sh\n')
+            detname = "Par04"
+        fsub.write(f'arguments             = {energy} {args.number} {args.particle} {escapedName} $(ClusterID) $(ProcId) {args.phi} {args.theta}\n')
         fsub.write(f'output                = output/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).$(ProcId).out\n')
         fsub.write(f'log                   = log/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).log\n')
         fsub.write(f'error                 = error/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).$(ProcId).err\n')
         fsub.write('RequestCpus = 8\n')
-        fsub.write('+JobFlavour = "nextweek"\n')
+        fsub.write('+JobFlavour = "testmatch"\n')
         fsub.write(f'transfer_input_files    = {input_macro}\n')
         fsub.write(f'transfer_output_files   = ""\n')
 
