@@ -12,6 +12,7 @@ from math import pi,log10,pow
 import argparse
 
 parser = argparse.ArgumentParser(description='Validation plots')
+parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'ODD'], default="Par04")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument('--plotEratio', action='store_true')
 group.add_argument('--plotEcell', action='store_true')
@@ -51,23 +52,35 @@ if not args.infileH5:
 num_events = args.numEvents
 # datasets
 if args.dataset == 2:
-    legend_root = ['ROOT, dataset2']
+    legend_root = [args.detector+', ROOT dataset2']
     ifLowGran = True
     num_phi_low = 16
     num_z_low = 45
     num_r_low = 9
     size_phi_low = 2*pi/num_phi_low
-    size_z_low = 3.4
-    size_r_low = 4.65
+    if args.detector == 'Par04':
+        # Values true for Par04 SiW
+        size_z_low = 3.4
+        size_r_low = 4.65
+    elif args.detector == 'ODD':
+        # Values true for ODD
+        size_z_low = 5.05
+        size_r_low = 4.65
 elif args.dataset == 3:
-    legend_root = ['ROOT, dataset3']
+    legend_root = [args.detector+', ROOT dataset3']
     ifLowGran = False
     num_phi = 50
     num_z = 45
     num_r = 18
     size_phi = 2*pi/num_phi
-    size_z = 3.4
-    size_r = 2.325
+    if args.detector == 'Par04':
+        # Values true for Par04 SiW
+        size_z = 3.4
+        size_r = 2.325
+    elif args.detector == 'ODD':
+        # Values true for ODD
+        size_z_low = 5.05
+        size_r_low = 2.325
 
 
 if args.legendRoot:
