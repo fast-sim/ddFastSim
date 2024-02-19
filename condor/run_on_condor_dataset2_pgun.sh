@@ -20,7 +20,7 @@ echo "Steering file ================"
 cat $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_dataset2_pgun.py
 cat job.${PARTICLE}.${ENERGY}GeV.N${NUMEVENTS}.mac
 
-echo "Simulating for energy" $ENERGY " GeV and for " ${NUMEVENTS} " showers of " ${PARTICLE}
+echo "Simulating for energy" $ENERGY " GeV and for " ${NUMEVENTS} " showers of " ${PARTICLE} " for phi = " ${PHI} " and theta = " ${THETA}
 
 ddsim --steeringFile $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_dataset2_pgun.py --gun.energy ${ENERGY}*GeV --gun.part ${NONESCAPEDPARTICLE} --gun.phiMin $PHI --gun.phiMax $PHI --gun.thetaMin $THETA --gun.thetaMax $THETA --numberOfEvents ${NUMEVENTS} --macroFile job.${PARTICLE}.${ENERGY}GeV.N${NUMEVENTS}.mac --outputFile ddsim_mesh_Par04_${PARTICLE}_${NUMEVENTS}events_${ENERGY}GeV_phi${PHI}_theta${THETA}_edm4hep.root
 
