@@ -171,7 +171,7 @@ def energy_ratio_root(fig, events, colour, label):
         edep = np.sum(energies)
         print(edep, eMC, args.samplingFraction)
         ratios.append(edep/eMC/args.samplingFraction)
-    return np.array(ratios).mean(), fig.hist(ratios, bins=np.linspace(0.,1.2,200), facecolor=colour, alpha=1, label=label, density = True)
+    return np.array(ratios).mean(), fig.hist(ratios, bins=np.linspace(0.,1.2,200), facecolor=colour, alpha=0.4, label=label, density = True)
 
 def energy_ratio_hdf5(fig, energies, showers, colour, label):
     ratios = []
@@ -189,7 +189,7 @@ def num_cells_root(fig,events, colour, label):
         mybins=np.linspace(args.axisRange[0], args.axisRange[1],50)
     else:
         mybins=np.linspace(1e2,2e5,50)
-    return np.array(all_num).mean(), fig.hist(all_num, bins=mybins, facecolor=colour, alpha=1, label=label, density = True)
+    return np.array(all_num).mean(), fig.hist(all_num, bins=mybins, facecolor=colour, alpha=0.4, label=label, density = True)
 
 def num_cells_hdf5(fig,showers, colour, label):
     all_num = []
@@ -216,7 +216,7 @@ def cell_energy_log_root(fig,events, colour, label):
         sumG4 = np.sum(energies)
         for val in [log10(en/args.samplingFraction) for en in energies]:
             all_logEn.append(val)
-    return fig.hist(all_logEn, bins=np.linspace(-3,4,100), facecolor=colour, alpha=1, label=label, density = True)
+    return fig.hist(all_logEn, bins=np.linspace(-3,4,100), facecolor=colour, alpha=0.4, label=label, density = True)
 
 def cell_energy_log_hdf5(fig,showers, colour, label):
     all_logEn = []
@@ -255,7 +255,7 @@ def long_profile_root(fig,events, colour,label, lowGran = False):
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
-    return fig.hist(np.concatenate(events["zCell"]), bins=np.linspace(0,numz-1,numz), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=1, label=label, density = True)
+    return fig.hist(np.concatenate(events["zCell"]), bins=np.linspace(0,numz-1,numz), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=0.4, label=label, density = True)
 
 def long_profile_hdf5(fig,showers, colour,label, lowGran = False):
     if lowGran:
@@ -291,7 +291,7 @@ def trans_profile_root(fig,events, colour,label, lowGran = False):
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
-    return fig.hist(np.concatenate(events["rhoCell"]), bins=np.linspace(0,numr-1,numr), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=1, label=label, density = True)
+    return fig.hist(np.concatenate(events["rhoCell"]), bins=np.linspace(0,numr-1,numr), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=0.4, label=label, density = True)
 
 def trans_profile_hdf5(fig,showers, colour,label,lowGran=False):
     if lowGran:
@@ -337,7 +337,7 @@ def long_moments_root(fig_first, fig_second, events, colour, label,lowGran=False
         second = np.sum([pow(z_ids[i] * sizez - first, 2) * energies[i] for i in range(len(z_ids))])
         second /= sumG4
         all_second_moments.append(second)
-    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.4*numz*sizez, 32) , facecolor=colour, alpha=1, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numz*sizez,2) / 35., 32) , facecolor=colour, alpha=1, label=label, density = True)
+    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.4*numz*sizez, 32) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numz*sizez,2) / 35., 32) , facecolor=colour, alpha=0.4, label=label, density = True)
 
 def long_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=False):
     if lowGran:
@@ -393,7 +393,7 @@ def trans_moments_root(fig_first, fig_second, events, colour, label, lowGran = F
         second = np.sum([pow(r_ids[i] * sizer - first, 2) * energies[i] for i in range(len(r_ids))])
         second /= sumG4
         all_second_moments.append(second)
-    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.75*numr*sizer,128) , facecolor=colour, alpha=1, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numr*sizer,2) / 8., 128) , facecolor=colour, alpha=1, label=label, density = True)
+    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.75*numr*sizer,128) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numr*sizer,2) / 8., 128) , facecolor=colour, alpha=0.4, label=label, density = True)
 
 def trans_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=False):
     if lowGran:
@@ -583,7 +583,7 @@ def plot_incident():
     else:
         mybins=np.linspace(1e3,1e6,100)
     for it in range(len(events_list)):
-        (vals, edges, _) = axE.hist(events_list[it]["EnergyMC"], bins = mybins, facecolor=colours[it], alpha=1,label=legend_root[it])
+        (vals, edges, _) = axE.hist(events_list[it]["EnergyMC"], bins = mybins, facecolor=colours[it], alpha=0.4,label=legend_root[it])
         val_of_bins_E.append(vals)
         edges_of_bins_E.append(edges)
     for it in range(len(h5_eMC_list)):
@@ -618,7 +618,7 @@ def plot_incident():
     if found_angle_theta:
         #theta distribution
         for it in range(len(events_list)):
-            (vals, edges, _) = axT.hist(events_list[it]["ThetaMC"], bins = np.linspace(0,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
+            (vals, edges, _) = axT.hist(events_list[it]["ThetaMC"], bins = np.linspace(0,pi,100), facecolor=colours[it], alpha=0.4,label=legend_root[it])
             val_of_bins_T.append(vals)
             edges_of_bins_T.append(edges)
         for it in range(len(h5_thetaMC_list)):
@@ -649,7 +649,7 @@ def plot_incident():
     if found_angle_phi:
         #phi distribution
         for it in range(len(events_list)):
-            (vals, edges, _) = axP.hist(events_list[it]["PhiMC"], bins = np.linspace(-pi,pi,100), facecolor=colours[it], alpha=1,label=legend_root[it])
+            (vals, edges, _) = axP.hist(events_list[it]["PhiMC"], bins = np.linspace(-pi,pi,100), facecolor=colours[it], alpha=0.4,label=legend_root[it])
             val_of_bins_P.append(vals)
             edges_of_bins_P.append(edges)
         for it in range(len(h5_phiMC_list)):
