@@ -15,8 +15,8 @@ SIM = DD4hepSimulation()
 
 ## The compact XML file
 if "FCCcore" in os.environ:
-   SIM.compactFile = os.environ["FCCcore"]+"/OpenDataDetector/xml/OpenDataDetector.xml"
-   print(f"Detector: {os.environ['FCCcore']}/OpenDataDetector/xml/OpenDataDetector.xml")
+   SIM.compactFile = os.environ["FCCcore"]+"/OpenDataDetector/xml/OpenDataDetector_noTracker.xml"
+   print(f"Detector: {os.environ['FCCcore']}/OpenDataDetector/xml/OpenDataDetector_noTracker.xml")
 ## Lorentz boost for the crossing angle, in radian!
 SIM.enableDetailedShowerMode = False
 SIM.enableG4GPS = False
