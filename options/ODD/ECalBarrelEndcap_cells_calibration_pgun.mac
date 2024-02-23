@@ -1,0 +1,7 @@
+#  ECalBarrelEndcap.mac
+#
+
+/analysis/setFileName 200GeV_1000showers_muP_calibration_analysis.root
+/random/setSavingFlag 1
+
+/run/beamOn 1000
