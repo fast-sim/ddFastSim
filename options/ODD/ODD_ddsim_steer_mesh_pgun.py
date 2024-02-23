@@ -32,7 +32,7 @@ if "FCCcore" in os.environ:
 SIM.numberOfEvents = 100
 ## Outputfile from the simulation,only lcio output is supported
 #SIM.outputFile = "dummyOutput_edm4hep.root" ##"dummyOutput.slcio"
-SIM.outputFile = "singleShower_Par04_lowgran_10GeV_100showers_gamma_theta1.57_phi0_edm4hep.root"
+SIM.outputFile = "singleShower_ODD_lowgran_10GeV_100showers_gamma_theta1.57_phi0_edm4hep.root"
 
 ## Physics list to use in simulation
 SIM.physicsList = None
@@ -201,7 +201,7 @@ SIM.gun.distribution = "uniform"
 ## Total energy (including mass) for the particle gun.
 ##
 ## If not None, it will overwrite the setting of momentumMin and momentumMax
-SIM.gun.energy = 0
+SIM.gun.energy = 10*GeV
 
 ##  isotropic distribution for the particle gun
 ##
