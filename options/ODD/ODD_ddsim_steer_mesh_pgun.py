@@ -340,8 +340,8 @@ def fastsimSettings(kernel):
    # Mandatory model parameters
    model.RegionName = 'ECalBarrelRegion'
    model.Enable = True
-   emParticles =  ["e-","e+","gamma"]
-   model.ApplicableParticles = emParticles
+   myParticles =  ["e-","e+","gamma","mu-","mu+","pi-","pi+"]
+   model.ApplicableParticles = myParticles
    model.enableUI()
    seq.adopt(model)
    #-------------------
@@ -350,7 +350,7 @@ def fastsimSettings(kernel):
    # Mandatory model parameters
    model_endcap.RegionName = 'ECalEndcapRegion'
    model_endcap.Enable = True
-   model_endcap.ApplicableParticles = emParticles
+   model_endcap.ApplicableParticles = myParticles
 
    model_endcap.enableUI()
    seq.adopt(model_endcap)

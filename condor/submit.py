@@ -6,7 +6,7 @@ if __name__=="__main__":
 
     # get additional arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'Par04_dataset2', 'ODD_dataset2'], default="Par04")
+    parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'Par04_dataset2', 'ODD_dataset2', 'ODDcells_dataset2'], default="Par04")
     parser.add_argument('--energy', '-e',type=int, nargs="+", help='Energy to simulate (GeV)', required=True)
     parser.add_argument('--phi',type=float, help='Azimuthal angle (rad) to set if particle gun is used (= energy is non zero)',default=0)
     parser.add_argument('--theta',type=float, help='Theta angle (rad) to set if particle gun is used (= energy is non zero)',default=1.57)
@@ -46,9 +46,10 @@ if __name__=="__main__":
 
         fenergy = open(input_macro, 'w')
         fenergy.write('\n\n/random/setSavingFlag 1\n')
-        fenergy.write('/analysis/setFileName analysis.root\n')
-        fenergy.write('/param/ActivateModel DefineMeshModel\n')
-        fenergy.write('/param/listModels\n')
+        if "cells" not in args.detector:
+            fenergy.write('/analysis/setFileName analysis.root\n')
+            fenergy.write('/param/ActivateModel DefineMeshModel\n')
+            fenergy.write('/param/listModels\n')
         if energy == 0:
             fenergy.write(f'/gps/particle {args.particle}\n')
             fenergy.write('/gps/ene/type Pow\n')
@@ -85,6 +86,9 @@ if __name__=="__main__":
             else:
                 fsub.write('executable             = run_on_condor_ODD_dataset2_pgun.sh\n')
             detname = "ODD"
+        elif args.detector == 'ODDcells_dataset2':
+            fsub.write('executable             = run_on_condor_ODDcells_dataset2_pgun.sh\n')
+            detname = "ODDcells"
         fsub.write(f'arguments             = {energy} {args.number} {args.particle} {escapedName} $(ClusterID) $(ProcId) {args.phi} {args.theta}\n')
         fsub.write(f'output                = output/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).$(ProcId).out\n')
         fsub.write(f'log                   = log/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).log\n')

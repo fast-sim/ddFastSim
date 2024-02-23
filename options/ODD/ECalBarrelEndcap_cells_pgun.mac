@@ -1,0 +1,6 @@
+#  ECalBarrelEndcap.mac
+#
+
+/random/setSavingFlag 1
+
+/run/beamOn 100
