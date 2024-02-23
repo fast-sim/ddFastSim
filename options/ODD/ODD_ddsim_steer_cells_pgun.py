@@ -29,10 +29,10 @@ if "FCCcore" in os.environ:
    SIM.macroFile = os.environ["FCCcore"]+"/ddfastsim/options/ODD/ECalBarrelEndcap_cells_pgun.mac"
    print(f"Detector: {os.environ['FCCcore']}/ddfastsim/options/ODD/ECalBarrelEndcap_cells_pgun.mac")
 ## number of events to simulate, used in batch mode
-SIM.numberOfEvents = 100
+SIM.numberOfEvents = 1000
 ## Outputfile from the simulation,only lcio output is supported
 #SIM.outputFile = "dummyOutput_edm4hep.root" ##"dummyOutput.slcio"
-SIM.outputFile = "singleShower_ODDcells_lowgran_10GeV_100showers_piP_theta1.57_phi0_edm4hep.root"
+SIM.outputFile = "singleShower_ODDcells_10GeV_1000showers_gamma_theta1.57_phi0_edm4hep.root"
 
 ## Physics list to use in simulation
 SIM.physicsList = None
@@ -86,16 +86,6 @@ SIM.action.mapActions = {}
 ##  set the default tracker action 
 #SIM.action.tracker =  ('Geant4VoidSensitiveAction')
 SIM.action.tracker =  ('Geant4TrackerWeightedAction', {'HitPositionCombination': 2, 'CollectSingleDeposits': False})
-
-# Configure Run actions
-#kernel = DDG4.Kernel()
-#run1 = DDG4.RunAction(kernel,'ScoreMeshRunAction/runaction')
-#kernel.registerGlobalAction(run1)
-#kernel.runAction().add(run1)
-#event1 = DDG4.EventAction(kernel,'ScoreMeshEventAction/eventaction')
-#kernel.registerGlobalAction(event1)
-#kernel.eventAction().add(event1)
-
 
 ################################################################################
 ## Configuration for the magnetic field (stepper)
@@ -196,7 +186,7 @@ SIM.gun.momentumMax = 10*GeV
 ## Minimal momentum when using distribution (default = 0.0)
 SIM.gun.momentumMin = 1*GeV
 SIM.gun.multiplicity = 1
-SIM.gun.particle = "pi+"
+SIM.gun.particle = "gamma"
 
 ## Maximal azimuthal angle for random distribution
 SIM.gun.phiMax = 0

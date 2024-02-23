@@ -1,6 +1,7 @@
 #  ECalBarrelEndcap.mac
 #
 
+/analysis/setFileName 10GeV_1000showers_gamma_ODDcells_analysis.root
 /random/setSavingFlag 1
 
-/run/beamOn 100
+/run/beamOn 1000
