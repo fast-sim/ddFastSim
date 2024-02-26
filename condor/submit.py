@@ -14,6 +14,7 @@ if __name__=="__main__":
     parser.add_argument('--jobs', '-j',type=int, default=1, help='Number of jobs/runs to submit')
     parser.add_argument('--particle', '-p',type=str, default="gamma", help='Name of particle')
     parser.add_argument('--test', '-t', action='store_true', help='If chosen, only config files are created, job is not submitted')
+    parser.add_argument('--flatNotPower', action='store_true', help='If chosen, and GPS is used, flat energy distribution will be generated instead of E^-1')
     parser.add_argument('--mail', '-m', help='Send mail about completed job', default="")
     args, _ = parser.parse_known_args()
     print(args)
@@ -52,10 +53,14 @@ if __name__=="__main__":
             fenergy.write('/param/listModels\n')
         if energy == 0:
             fenergy.write(f'/gps/particle {args.particle}\n')
-            fenergy.write('/gps/ene/type Pow\n')
+            if args.flatNotPower:
+                fenergy.write('/gps/ene/type Lin\n')
+                fenergy.write('/gps/ene/intercept 1\n')
+            else: # use power distribution by default, E^-1
+                fenergy.write('/gps/ene/type Pow\n')
+                fenergy.write('/gps/ene/alpha -1\n')
             fenergy.write('/gps/ene/min 1.0 GeV\n')
             fenergy.write('/gps/ene/max 1.0 TeV\n')
-            fenergy.write('/gps/ene/alpha -1\n')
             fenergy.write('/gps/ang/type iso\n')
             fenergy.write('/gps/ang/mintheta 0.87 rad\n')
             fenergy.write('/gps/ang/maxtheta 2.27 rad\n')
@@ -76,7 +81,10 @@ if __name__=="__main__":
             detname = "Par04"
         elif args.detector == 'Par04_dataset2':
             if energy == 0:
-                fsub.write('executable             = run_on_condor_dataset2_gps.sh\n')
+                if args.flatNotPower:
+                    fsub.write('executable             = run_on_condor_dataset2_gps_flat.sh\n')
+                else:
+                    fsub.write('executable             = run_on_condor_dataset2_gps.sh\n')
             else:
                 fsub.write('executable             = run_on_condor_dataset2_pgun.sh\n')
             detname = "Par04"
