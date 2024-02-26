@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser(description='Validation plots')
 parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'ODD'], default="Par04")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument('--plotEratio', action='store_true')
+group.add_argument('--plotEdep', action='store_true')
 group.add_argument('--plotEcell', action='store_true')
 group.add_argument('--plotLogEcell', action='store_true')
 group.add_argument('--plotNumcells', action='store_true')
@@ -169,7 +170,6 @@ def energy_ratio_root(fig, events, colour, label):
     ratios = []
     for energies, eMC in zip(events["EnergyCell"], events["EnergyMC"]):
         edep = np.sum(energies)
-        print(edep, eMC, args.samplingFraction)
         ratios.append(edep/eMC/args.samplingFraction)
     return np.array(ratios).mean(), fig.hist(ratios, bins=np.linspace(0.,1.2,200), facecolor=colour, alpha=0.4, label=label, density = True)
 
@@ -180,6 +180,21 @@ def energy_ratio_hdf5(fig, energies, showers, colour, label):
         edep = np.sum(sh)
         ratios.append(edep/en)
     return np.array(ratios).mean(), fig.hist(ratios, bins=np.linspace(0.,1.2,200), facecolor=colour, alpha=0.4, label=label, density = True)
+
+def energy_deposited_root(fig, events, colour, label):
+    result = []
+    for energies in events["EnergyCell"]:
+        edep = np.sum(energies)
+        result.append(edep/args.samplingFraction)
+    return np.array(result).mean(), fig.hist(result, bins=np.linspace(min(result),max(result),200), facecolor=colour, alpha=0.4, label=label, density = True)
+
+def energy_ratio_hdf5(fig, energies, showers, colour, label):
+    result = []
+    print(showers.shape)
+    for sh in showers:
+        edep = np.sum(sh)
+        result.append(edep)
+    return np.array(result).mean(), fig.hist(result, bins=np.linspace(min(result),max(result),200), facecolor=colour, alpha=0.4, label=label, density = True)
 
 def num_cells_root(fig,events, colour, label):
     all_num = []
@@ -521,6 +536,49 @@ def plot_num_cells():
         ax3b.legend()
     fig3.tight_layout()
     fig3.savefig(args.outfile+'num_cells')
+
+def plot_energy_deposited():
+    if len(events_list)+len(h5_eMC_list) > 1:
+        fig4, (ax4, ax4b) = plt.subplots(2, 1,figsize=(9, 12), gridspec_kw={'height_ratios': [3, 1]})
+    else:
+        fig4, (ax4) = plt.subplots(1, 1,figsize=(9, 7), gridspec_kw={'height_ratios': [1]})
+    val_of_bins_x1 = []
+    edges_of_bins_x1 = []
+    for it in range(len(events_list)):
+        mean_edep_root, (vals, edges, _) = energy_deposited_root(ax4,events_list[it],colours[it], legend_root[it])
+        ax4.axvline(mean_edep_root, color=colours[it], linestyle='dashed', linewidth=1, label=fr"<E> = {mean_edep_root:.2f}")
+        val_of_bins_x1.append(vals)
+        edges_of_bins_x1.append(edges)
+    for it in range(len(h5_eMC_list)):
+        mean_edep_hdf5, (vals, edges, _) = energy_deposited_hdf5(ax4, h5_eMC_list[it], h5_showers_list[it], colours[it+len(events_list)], legend_h5[it])
+        ax4.axvline(mean_edep_hdf5, color=colours[it+len(events_list)], linestyle='dashed', linewidth=1, label=fr"<E> = {mean_edep_hdf5:.2f}")
+        val_of_bins_x1.append(vals)
+        edges_of_bins_x1.append(edges)
+    ax4.set_xlabel('$E_{dep}$')
+    ax4.set_ylabel('Normalized entries')
+    ax4.set_title('Energy deposited')
+    ax4.grid(True)
+    ax4.legend()
+    if len(events_list)+len(h5_eMC_list) > 1:
+        ax4b.set_ylabel('ratio')
+        bincenter = 0.5 * (edges_of_bins_x1[0][1:] + edges_of_bins_x1[0][:-1])
+        if len(events_list) > 0:
+            legend_zero = legend_root[0]
+        elif len(h5_eMC_list) > 0:
+            legend_zero = legend_h5[0]
+        for it in range(1,len(val_of_bins_x1)):
+            if it < len(events_list):
+                current_legend = legend_root[it]
+            else:
+                current_legend = legend_h5[it-len(events_list)]
+            ratio = np.zeros(len(val_of_bins_x1[it]))
+            np.divide(val_of_bins_x1[it], val_of_bins_x1[0], out=ratio, where=(val_of_bins_x1[0] != 0))
+            error = np.divide(val_of_bins_x1[it] * np.sqrt(val_of_bins_x1[0]) + val_of_bins_x1[0] * np.sqrt(val_of_bins_x1[it]),np.power(val_of_bins_x1[0], 2), where=(val_of_bins_x1[0] != 0))
+            ax4b.scatter(edges_of_bins_x1[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
+        ax4b.legend()
+        # ax4b.set_ylim(0.25,4)
+    fig4.tight_layout()
+    fig4.savefig(args.outfile+'energy_deposited_small')
 
 def plot_energy_ratio():
     if len(events_list)+len(h5_eMC_list) > 1:
@@ -891,6 +949,8 @@ def plot_incident_energy():
     fig8.tight_layout()
     fig8.savefig(args.outfile+'incident_energy')
 
+if args.plotEdep:
+    plot_energy_deposited()
 if args.plotEratio:
     plot_energy_ratio()
 if args.plotEcell:
