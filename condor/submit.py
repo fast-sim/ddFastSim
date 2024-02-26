@@ -90,7 +90,10 @@ if __name__=="__main__":
             detname = "Par04"
         elif args.detector == 'ODD_dataset2':
             if energy == 0:
-                fsub.write('executable             = run_on_condor_ODD_dataset2_gps.sh\n')
+                if args.flatNotPower:
+                    fsub.write('executable             = run_on_condor_ODD_dataset2_gps_flat.sh\n')
+                else:
+                    fsub.write('executable             = run_on_condor_ODD_dataset2_gps.sh\n')
             else:
                 fsub.write('executable             = run_on_condor_ODD_dataset2_pgun.sh\n')
             detname = "ODD"
