@@ -359,7 +359,7 @@ def fastsimSettings(kernel):
    # Now build the physics list:
    phys = kernel.physicsList()
    ph = PhysicsList(kernel, str('Geant4FastPhysics/FastPhysicsList'))
-   ph.EnabledParticles = emParticles
+   ph.EnabledParticles = myParticles
    ph.BeVerbose = True
    ph.enableUI()
    phys.adopt(ph)
