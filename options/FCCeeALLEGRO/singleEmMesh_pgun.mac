@@ -1,0 +1,10 @@
+#  ECalBarrelEndcap.mac
+#
+
+/random/setSavingFlag 1
+/analysis/setFileName analysis_FCCeeALLEGRO.root
+/param/ActivateModel DefineMeshModel
+/param/listModels
+/param/listIsApplicable
+
+/run/beamOn 100

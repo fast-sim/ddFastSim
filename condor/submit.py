@@ -6,7 +6,7 @@ if __name__=="__main__":
 
     # get additional arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'Par04_dataset2', 'ODD_dataset2', 'ODDcells_dataset2'], default="Par04")
+    parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'Par04_dataset2', 'ODD_dataset2', 'ODDcells_dataset2', 'FCCeeALLEGRO_dataset2'], default="Par04")
     parser.add_argument('--energy', '-e',type=int, nargs="+", help='Energy to simulate (GeV)', required=True)
     parser.add_argument('--phi',type=float, help='Azimuthal angle (rad) to set if particle gun is used (= energy is non zero)',default=0)
     parser.add_argument('--theta',type=float, help='Theta angle (rad) to set if particle gun is used (= energy is non zero)',default=1.57)
@@ -100,6 +100,14 @@ if __name__=="__main__":
         elif args.detector == 'ODDcells_dataset2':
             fsub.write('executable             = run_on_condor_ODDcells_dataset2_pgun.sh\n')
             detname = "ODDcells"
+        elif args.detector == 'FCCeeALLEGRO_dataset2':
+            if energy == 0:
+                if not args.flatNotPower:
+                    fsub.write('executable             = run_on_condor_FCCeeALLEGRO_dataset2_gps.sh\n')
+            else:
+                fsub.write('executable             = run_on_condor_FCCeeALLEGRO_dataset2_pgun.sh\n')
+            detname = "FCCeeALLEGRO"
+
         fsub.write(f'arguments             = {energy} {args.number} {args.particle} {escapedName} $(ClusterID) $(ProcId) {args.phi} {args.theta}\n')
         fsub.write(f'output                = output/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).$(ProcId).out\n')
         fsub.write(f'log                   = log/job.{detname}.{escapedName}.energy{energy}.number{args.number}.id$(ClusterId).log\n')
