@@ -45,9 +45,16 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
   {
     fHitCollectionID = G4SDManager::GetSDMpointer()->GetCollectionID("ECalBarrelCollection");
   }
+  if(fHitCollectionHcalID == -1)
+  {
+    fHitCollectionHcalID = G4SDManager::GetSDMpointer()->GetCollectionID("HCalBarrelCollection");
+  }
   // Get hits collection
   auto hitsCollection =
     static_cast<dd4hep::sim::Geant4HitCollection*>(aEvent->GetHCofThisEvent()->GetHC(fHitCollectionID));
+  
+  auto hitsCollectionHcal =
+    static_cast<dd4hep::sim::Geant4HitCollection*>(aEvent->GetHCofThisEvent()->GetHC(fHitCollectionHcalID));
   
   if(hitsCollection == nullptr)
   {
@@ -115,21 +122,50 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
     G4cout << "ERROR, problem with  Z IDs: " << hitZ << " != " <<  hitID % (fCellNbRho *fCellNbZ) %fCellNbZ << G4endl;
     //return;
   }
-    
-    // std::size_t hitID =
-    //       fCellNbRho *fCellNbZ * phiNo
-    //     +fCellNbZ * rhoNo
-    //     + zNo;
-    // hitID / (fCellNbRho *fCellNbZ) = phi
-    // hitID % (fCellNbRho *fCellNbZ) /fCellNbZ = rho
-    // hitID % (fCellNbRho *fCellNbZ) %fCellNbZ = z
-    // hitID = 2 * 3 * 1   +    3 * 1   +   1 = 6+3+1 = 10
-    //        hitID / 6 = 1. hitID %6 / 3 = 1  hitID %6 %3 = 1
-    // hitID = 2 * 3 * 0   +    3 * 1   +   2 = 3+2 = 5
-    //        hitID / 6 = 0 hitID %6 / 3 = 1  hitID %6 %3  = 2
-    // hitID = 2 * 3 * 1   +    3 * 0   +   2 = 6+2 = 8
-    //        hitID / 6 = 1. hitID %6 / 3 = 0  hitID %6 %3 = 2
-    
+
+    if(hitEn > 0)
+    {
+      totalEnergy += hitEn;
+      tDistance = hitZ * fCellSizeZ;
+      rDistance = hitRho * fCellSizeRho;
+      phiDistance = hitPhi * fCellSizePhi;
+      tFirstMoment += hitEn * tDistance;
+      rFirstMoment += hitEn * rDistance;
+      phiMean += hitEn * phiDistance;
+      analysisManager->FillH1(4, tDistance, hitEn);
+      analysisManager->FillH1(5, rDistance, hitEn);
+      if(hitEn > 0.0005)
+      {  // e > 0.5 keV
+        fCalEdep[numNonZeroThresholdCells] = hitEn;
+        fCalRho[numNonZeroThresholdCells]  = hitRho;
+        fCalPhi[numNonZeroThresholdCells]  = hitPhi;
+        fCalZ[numNonZeroThresholdCells]    = hitZ;
+        numNonZeroThresholdCells++;
+        analysisManager->FillH1(12, std::log10(hitEn));
+      }
+    }
+  }
+  for(size_t iHit = 0; iHit < hitsCollectionHcal->GetSize(); iHit++)
+  {
+    hit     = static_cast<dd4hep::sim::Geant4Calorimeter::Hit*>(hitsCollectionHcal->hit(iHit));
+    hitZ    = hit->position.z();
+    hitRho  = hit->position.x();
+    hitPhi  = hit->position.y();
+    hitEn   = hit->energyDeposit;
+    hitID = hit->cellID;
+
+    if (hitPhi != (hitID / (fCellNbRho *fCellNbZ))) {
+    G4cout << "ERROR, problem with  PHI IDs: " << hitPhi << " != " <<  hitID / (fCellNbRho *fCellNbZ) << G4endl;
+    //return;
+  }
+    if (hitRho != (hitID % (fCellNbRho *fCellNbZ)/fCellNbZ)) {
+    G4cout << "ERROR, problem with  Rho IDs: " << hitRho << " != " <<  hitID % (fCellNbRho *fCellNbZ) /fCellNbZ << G4endl;
+    //return;
+  }
+  if (hitZ != (hitID % (fCellNbRho *fCellNbZ) %fCellNbZ)) {
+    G4cout << "ERROR, problem with  Z IDs: " << hitZ << " != " <<  hitID % (fCellNbRho *fCellNbZ) %fCellNbZ << G4endl;
+    //return;
+  }
 
     if(hitEn > 0)
     {
@@ -174,6 +210,23 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
   for(size_t iHit = 0; iHit < hitsCollection->GetSize(); iHit++)
   {
     hit    = static_cast<dd4hep::sim::Geant4Calorimeter::Hit*>(hitsCollection->hit(iHit));
+    hitEn  = hit->energyDeposit;
+    hitZ   = hit->position.z();
+    hitRho = hit->position.x();
+    hitPhi = hit->position.y();
+    if(hitEn > 0)
+    {
+      tDistance = hitZ * fCellSizeZ;
+      rDistance = hitRho * fCellSizeRho;
+      phiDistance = hitPhi * fCellSizePhi;
+      tSecondMoment += hitEn * std::pow(tDistance - tFirstMoment, 2);
+      rSecondMoment += hitEn * std::pow(rDistance - rFirstMoment, 2);
+      analysisManager->FillH1(10, phiDistance - phiMean, hitEn);
+    }
+  }
+  for(size_t iHit = 0; iHit < hitsCollectionHcal->GetSize(); iHit++)
+  {
+    hit    = static_cast<dd4hep::sim::Geant4Calorimeter::Hit*>(hitsCollectionHcal->hit(iHit));
     hitEn  = hit->energyDeposit;
     hitZ   = hit->position.z();
     hitRho = hit->position.x();

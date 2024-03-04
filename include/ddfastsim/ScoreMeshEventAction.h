@@ -42,6 +42,7 @@ class G4Event;
         G4Timer fTimer;
         /// ID of a hit collection to analyse
         G4int fHitCollectionID = -1;
+        G4int fHitCollectionHcalID = -1;
         /// Size of cell along Z axis
         double fCellSizeZ =  5.05*mm;
         /// Size of cell along radius of cylinder

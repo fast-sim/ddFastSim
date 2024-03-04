@@ -7,7 +7,7 @@
 ######################################################################
 from DDSim.DD4hepSimulation import DD4hepSimulation
 import DDG4
-from g4units import m, mm, GeV, MeV, rad, keV,TeV
+from g4units import m, mm, cm, GeV, MeV, rad, keV,TeV
 import os
 from math import pi
 
@@ -77,12 +77,12 @@ SIM.vertexSigma = [0.0, 0.0, 0.0, 0.0]
 ################################################################################
 
 from math import pi
-meshCellNumRho = 9
+meshCellNumRho = 100
 meshCellNumPhi = 16
-meshCellNumZ = 45
+meshCellNumZ = 100
 meshCellSizeRho = 4.65 * mm
 meshCellSizePhi = 2 * pi / meshCellNumPhi
-meshCellSizeZ = 5.05 * mm
+meshCellSizeZ = 5.05 * cm
 
 
 ##  set the default calorimeter action
