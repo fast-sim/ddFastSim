@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ### First some configuration settings that need to changed for each user
-export FCCcore=/afs/cern.ch/work/a/azaborow/FCC/
-OUTPATH=/eos/geant4/fastSim/ddfastsim/ODD/dataset2_discrete_noTracker/
+export FCCcore=/afs/cern.ch/user/l/lkolberg/ODD/
+OUTPATH=/eos/user/l/lkolberg/ODD/dataset2_calibration_discrete_noTracker/
 ENERGY=$1
 NUMEVENTS=$2
 NONESCAPEDPARTICLE=$3
