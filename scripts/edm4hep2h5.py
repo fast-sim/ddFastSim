@@ -16,10 +16,10 @@ def parse_args(argv):
     p = argparse.ArgumentParser()
     p.add_argument("--outputDir", '-o', type=str, default="./", help="Path to the output directory")
     p.add_argument("--inputFile", '-i', type=str, required=True, help="Name of the EDM4hep file to translate")
-    p.add_argument("--numR", type=int, default=18, help="Number of cells in R")
-    p.add_argument("--numPhi", type=int, default=50, help="Number of cells in phi")
+    p.add_argument("--numR", type=int, default=9, help="Number of cells in R")
+    p.add_argument("--numPhi", type=int, default=16, help="Number of cells in phi")
     p.add_argument("--numZ", type=int, default=45, help="Number of cells in z")
-    p.add_argument("--samplingFraction", type=float, default=0.033, help="Sampling fraction to use to rescale energy. Defined as f=active/(active+absorber)")
+    p.add_argument("--samplingFraction", type=float, default=1., help="Sampling fraction to use to rescale energy. Defined as f=active/(active+absorber)")
     args = p.parse_args()
     return args
 
