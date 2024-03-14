@@ -15,8 +15,8 @@ SIM = DD4hepSimulation()
 
 ## The compact XML file
 if "FCCcore" in os.environ:
-   SIM.compactFile = os.environ["FCCcore"]+"/OpenDataDetector/xml/OpenDataDetector.xml"
-   print(f"Detector: {os.environ['FCCcore']}/OpenDataDetector/xml/OpenDataDetector.xml")
+   SIM.compactFile = os.environ["FCCcore"]+"/OpenDataDetector/xml/OpenDataDetector_allActive.xml"
+   print(f"Detector: {os.environ['FCCcore']}/OpenDataDetector/xml/OpenDataDetector_allActive.xml")
 ## Lorentz boost for the crossing angle, in radian!
 SIM.enableDetailedShowerMode = False
 SIM.enableG4GPS = False
@@ -26,10 +26,10 @@ SIM.enableGun = True
 #SIM.inputFiles = [""]
 ## no macro file to execute for runType 'run' or 'vis'
 ## number of events to simulate, used in batch mode
-SIM.numberOfEvents = 1000
+SIM.numberOfEvents = 100
 ## Outputfile from the simulation,only lcio output is supported
 #SIM.outputFile = "dummyOutput_edm4hep.root" ##"dummyOutput.slcio"
-SIM.outputFile = "singleShower_ODD_cells_10GeV_1000showers_gamma_theta1.57_phi0_edm4hep.root"
+SIM.outputFile = "singleShower_ODD_cells_10GeV_100showers_gamma_theta1.57_phi0_edm4hep.root"
 
 ## Physics list to use in simulation
 SIM.physicsList = None
@@ -77,7 +77,7 @@ SIM.vertexSigma = [0.0, 0.0, 0.0, 0.0]
 ##      as well as for fast simulation as long as all absorbers are marked as sensitive in XML
 ##    TODO: fix for hadronic calorimetry, right now it is ignored so test only with EM showers
 # SIM.action.calo = ("Geant4CalorimeterAction") # For detailed mode: ,{'HitCreationMode': 2,})
-SIM.action.calo = ('Geant4FullFastCalorimeterAction', {'sensitiveEMSlice': 3, 'sensitiveHadSlice': 2})
+SIM.action.calo = ('Geant4FullFastCalorimeterAction', {'sensitiveEMSlice': 4, 'sensitiveHadSlice': 3})
 
 ##  create a map of patterns and actions to be applied to sensitive detectors
 ##         example: SIM.action.mapActions['tpc'] = "TPCSDAction"
