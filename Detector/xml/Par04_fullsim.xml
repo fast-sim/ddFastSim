@@ -46,7 +46,8 @@
   <readouts>
     <readout name="ECalBarrelCollection">
       <!-- using only non-negative identifiers -->
-      <id>system:4,layer:7,slice:2,r:5,phi:6,z:6</id>
+      <segmentation type="GridPhiEta" grid_size_eta="0.05" offset_eta="-3" phi_bins="128"/>
+      <id>system:4,layer:7,slice:2,phi:-10,eta:16</id>
     </readout>
   </readouts>
 
@@ -56,6 +57,7 @@
     </detector>
 
     <detector id="1" name="EMCalBarrel" type="SandwichCylinders" readout="ECalBarrelCollection">
+      <type_flags type=" DetType_CALORIMETER + DetType_ELECTROMAGNETIC + DetType_BARREL"/>
       <sensitive type="CalorimeterSD"/>
       <dimensions rmin="EMBarrel_rmin" rmax="EMBarrel_rmax" dz="EMBarrel_dz" vis="ecal_envelope"/>
       <layer repeat="EMBarrel_numLayers">
