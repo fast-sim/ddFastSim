@@ -188,6 +188,13 @@ def energy_deposited_root(fig, events, colour, label):
         result.append(edep/args.samplingFraction)
     return np.array(result).mean(), fig.hist(result, bins=np.linspace(min(result),max(result),200), facecolor=colour, alpha=0.4, label=label, density = True)
 
+def energy_deposited_hdf5(fig, showers, colour, label):
+    result = []
+    for sh in showers:
+        edep = np.sum(sh)
+        result.append(edep)
+    return np.array(result).mean(), fig.hist(result, bins=np.linspace(min(result),max(result),200), facecolor=colour, alpha=0.4, label=label, density = True)
+
 def energy_ratio_hdf5(fig, energies, showers, colour, label):
     result = []
     print(showers.shape)
@@ -550,7 +557,7 @@ def plot_energy_deposited():
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
     for it in range(len(h5_eMC_list)):
-        mean_edep_hdf5, (vals, edges, _) = energy_deposited_hdf5(ax4, h5_eMC_list[it], h5_showers_list[it], colours[it+len(events_list)], legend_h5[it])
+        mean_edep_hdf5, (vals, edges, _) = energy_deposited_hdf5(ax4, h5_showers_list[it], colours[it+len(events_list)], legend_h5[it])
         ax4.axvline(mean_edep_hdf5, color=colours[it+len(events_list)], linestyle='dashed', linewidth=1, label=fr"<E> = {mean_edep_hdf5:.2f}")
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
