@@ -60,7 +60,10 @@ if __name__=="__main__":
                 fenergy.write('/gps/ene/type Pow\n')
                 fenergy.write('/gps/ene/alpha -1\n')
             fenergy.write('/gps/ene/min 1.0 GeV\n')
-            fenergy.write('/gps/ene/max 1.0 TeV\n')
+            if 'FCCee' in args.detector:
+                fenergy.write('/gps/ene/max 100 GeV\n')
+            else:
+                fenergy.write('/gps/ene/max 1.0 TeV\n')
             fenergy.write('/gps/ang/type iso\n')
             fenergy.write('/gps/ang/mintheta 0.87 rad\n')
             fenergy.write('/gps/ang/maxtheta 2.27 rad\n')

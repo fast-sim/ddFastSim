@@ -2,7 +2,7 @@
 
 ### First some configuration settings that need to changed for each user
 export FCCcore=/afs/cern.ch/work/a/azaborow/FCC/
-OUTPATH=/eos/geant4/fastSim/ddfastsim/FCCeeALLEGRO/dataset2_1GeV1TeVPower_theta0p87to2p27_phiFull/
+OUTPATH=/eos/geant4/fastSim/ddfastsim/FCCeeALLEGRO/dataset2_1GeV100GeVPower_theta0p87to2p27_phiFull/
 ENERGY=$1
 NUMEVENTS=$2
 PARTICLE=$4
