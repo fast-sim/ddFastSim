@@ -14,12 +14,12 @@ source $FCCcore/ddfastsim/install/bin/thisDDFastSim.sh
 source /cvmfs/sw.hsf.org/key4hep/setup.sh
 
 echo "Steering file ================"
-cat $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_dataset2_gps.py
+cat $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_dataset2_mesh_gps.py
 cat job.${PARTICLE}.N${NUMEVENTS}.mac
 
 echo "Simulating for energy" $ENERGY " GeV and for " ${NUMEVENTS} " showers of " ${PARTICLE}
 
-ddsim --steeringFile $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_dataset2_gps.py --numberOfEvents ${NUMEVENTS} --macroFile job.${PARTICLE}.${ENERGY}GeV.N${NUMEVENTS}.mac --outputFile ddsim_mesh_Par04_${PARTICLE}_${NUMEVENTS}events_1GeV1TeV_GPSflat_edm4hep.root
+ddsim --steeringFile $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_dataset2_mesh_gps.py --numberOfEvents ${NUMEVENTS} --macroFile job.${PARTICLE}.${ENERGY}GeV.N${NUMEVENTS}.mac --outputFile ddsim_mesh_Par04_${PARTICLE}_${NUMEVENTS}events_1GeV1TeV_GPSflat_edm4hep.root
 
 echo "Copying the output file to " $OUTPATH
 mkdir -p $OUTPATH/
