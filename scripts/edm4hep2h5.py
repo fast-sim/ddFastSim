@@ -74,10 +74,10 @@ def main(argv):
             all_showers.append(shower)
         # Save dataset
         print(f"Creating datasets with shape 3x{np.shape(arrays['energyMC'])} and {np.shape(all_showers)} ")
-        h5_file.create_dataset("incident_energy", data=arrays["energyMC"], compression="gzip", compression_opts=9,)
-        h5_file.create_dataset("incident_phi", data=arrays["phiMC"], compression="gzip", compression_opts=9,)
-        h5_file.create_dataset("incident_theta", data=arrays["thetaMC"], compression="gzip", compression_opts=9,)
-        h5_file.create_dataset("showers", data=all_showers, compression="gzip", compression_opts=9,)
+        h5_file.create_dataset("incident_energy", data=arrays["energyMC"], compression="gzip", compression_opts=9, dtype='f4')
+        h5_file.create_dataset("incident_phi", data=arrays["phiMC"], compression="gzip", compression_opts=9, dtype='f4')
+        h5_file.create_dataset("incident_theta", data=arrays["thetaMC"], compression="gzip", compression_opts=9, dtype='f4')
+        h5_file.create_dataset("showers", data=all_showers, compression="gzip", compression_opts=9, dtype='f4')
         h5_file.close()
 
 
