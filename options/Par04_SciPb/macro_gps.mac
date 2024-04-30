@@ -1,0 +1,21 @@
+#  ECalBarrelEndcap.mac
+#
+
+/random/setSavingFlag 1
+/analysis/setFileName analysis_Par04.root
+/param/ActivateModel DefineMeshModel
+/param/listModels
+/param/listIsApplicable
+
+/gps/particle gamma
+/gps/ene/type Pow
+/gps/ene/min 1.0 GeV
+/gps/ene/max 1.0 TeV
+/gps/ene/alpha -1
+/gps/ang/type iso
+/gps/ang/mintheta 0.87 rad
+/gps/ang/maxtheta 2.27 rad
+/gps/ang/minphi 0
+/gps/ang/maxphi 6.283 rad
+
+/run/beamOn 100

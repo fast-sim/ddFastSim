@@ -11,7 +11,7 @@ NODEID=$6
 ###
 
 source $FCCcore/ddfastsim/install/bin/thisDDFastSim.sh
-source /cvmfs/sw.hsf.org/key4hep/setup.sh
+source /cvmfs/sw.hsf.org/key4hep/releases/2023-11-23/x86_64-almalinux9-gcc11.3.1-opt/key4hep-stack/2023-11-30-gyuooo/setup.sh
 
 echo "Steering file ================"
 cat $FCCcore/ddfastsim/options/Par04/Par04_ddsim_steer_gps.py

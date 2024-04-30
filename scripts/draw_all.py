@@ -646,7 +646,7 @@ def plot_incident():
     if args.axisRange:
         mybins=np.linspace(args.axisRange[0], args.axisRange[1],100)
     else:
-        mybins=np.linspace(1e3,1e6,100)
+        mybins=np.linspace(1e3,1e6,30)
     for it in range(len(events_list)):
         (vals, edges, _) = axE.hist(events_list[it]["EnergyMC"], bins = mybins, facecolor=colours[it], alpha=0.4,label=legend_root[it])
         val_of_bins_E.append(vals)
@@ -687,16 +687,16 @@ def plot_incident():
             val_of_bins_T.append(vals)
             edges_of_bins_T.append(edges)
         for it in range(len(h5_thetaMC_list)):
-            (vals, edges, _) = axT.hist(h5_thetaMC_list[it], bins = np.linspace(0,pi,100), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
+            (vals, edges, _) = axT.hist(h5_thetaMC_list[it], bins = np.linspace(0,pi,30), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
             val_of_bins_T.append(vals)
             edges_of_bins_T.append(edges)
-        axT.set_xlabel('${\theta}_{MC}$ (rad)')
+        axT.set_xlabel('$\theta_{MC}$ (rad)')
         axT.set_ylim(bottom=1)
         axT.set_yscale('log')
         axT.set_ylabel('Entries')
         axT.set_title('Incident energy distribution')
         axT.grid(True)
-        axT.legend()
+        axT.legend(loc='lower left')
         if len(events_list)+len(h5_eMC_list) > 1:
             axTr.set_ylabel('ratio')
             bincenter = 0.5 * (edges_of_bins_T[0][1:] + edges_of_bins_T[0][:-1])
@@ -718,7 +718,7 @@ def plot_incident():
             val_of_bins_P.append(vals)
             edges_of_bins_P.append(edges)
         for it in range(len(h5_phiMC_list)):
-            (vals, edges, _) = axP.hist(h5_phiMC_list[it], bins = np.linspace(-pi,pi,100), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
+            (vals, edges, _) = axP.hist(h5_phiMC_list[it], bins = np.linspace(-pi,pi,30), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
             val_of_bins_P.append(vals)
             edges_of_bins_P.append(edges)
         axP.set_xlabel('$\phi_{MC}$ (rad)')
@@ -727,7 +727,7 @@ def plot_incident():
         axP.set_ylabel('Entries')
         axP.set_title('Incident energy distribution')
         axP.grid(True)
-        axP.legend()
+        axP.legend(loc='lower left')
         if len(events_list)+len(h5_eMC_list) > 1:
             axPr.set_ylabel('ratio')
             bincenter = 0.5 * (edges_of_bins_P[0][1:] + edges_of_bins_P[0][:-1])

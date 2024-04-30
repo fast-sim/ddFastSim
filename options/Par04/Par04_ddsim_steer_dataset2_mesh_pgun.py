@@ -200,7 +200,7 @@ SIM.gun.distribution = "uniform"
 ## Total energy (including mass) for the particle gun.
 ##
 ## If not None, it will overwrite the setting of momentumMin and momentumMax
-SIM.gun.energy = 0
+SIM.gun.energy = 1*GeV
 
 ##  isotropic distribution for the particle gun
 ##
@@ -210,7 +210,7 @@ SIM.gun.energy = 0
 #SIM.gun.isotrop = True
 
 ## Maximal momentum when using distribution (default = 0.0)
-SIM.gun.momentumMax = 10*GeV
+SIM.gun.momentumMax = 1*GeV
 
 ## Minimal momentum when using distribution (default = 0.0)
 SIM.gun.momentumMin = 1*GeV

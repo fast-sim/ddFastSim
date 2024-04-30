@@ -12,7 +12,7 @@ NODEID=$6
 
 source $FCCcore/ddfastsim/install/bin/thisDDFastSim.sh
 source $FCCcore/OpenDataDetector/install/bin/this_odd.sh
-source /cvmfs/sw.hsf.org/key4hep/setup.sh
+source /cvmfs/sw.hsf.org/key4hep/releases/2023-11-23/x86_64-almalinux9-gcc11.3.1-opt/key4hep-stack/2023-11-30-gyuooo/setup.sh
 export FCCDETECTORS=$FCCcore/k4geo/
 export ROOT_INCLUDE_DIR=$FCCDETECTORS/install/include/:$ROOT_INCLUDE_DIR
 export LD_LIBRARY_PATH=$FCCDETECTORS/install/lib64/:$FCCDETECTORS/install/lib/:$LD_LIBRARY_PATH

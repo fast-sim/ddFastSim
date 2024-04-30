@@ -234,10 +234,10 @@ SIM.gun.position = (0.0, 0.0, 0.0)
 #SIM.gun.thetaMin = 0
 
 ## Maximal pseudorapidity for random distibution (overrides thetaMin)
-SIM.gun.etaMax = 0
+#SIM.gun.etaMax = 0
 
 ## Minimal pseudorapidity for random distibution (overrides thetaMax)
-SIM.gun.etaMin = 0
+#SIM.gun.etaMin = 0
 
 ################################################################################
 ## Configuration for the output levels of DDG4 components
