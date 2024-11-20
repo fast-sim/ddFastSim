@@ -1,7 +1,6 @@
 ######################################################################
 #
-#  custom steering file for ODD simulation 
-#  It applies a virtual scoring of energy around the incident particle
+#  custom steering file for ODD simulation
 #
 #
 ######################################################################
@@ -15,8 +14,8 @@ SIM = DD4hepSimulation()
 
 ## The compact XML file
 if "FCCcore" in os.environ:
-   SIM.compactFile = os.environ["FCCcore"]+"/OpenDataDetector/xml/OpenDataDetector_allActive.xml"
-   print(f"Detector: {os.environ['FCCcore']}/OpenDataDetector/xml/OpenDataDetector_allActive.xml")
+   SIM.compactFile = os.environ["FCCcore"]+"/OpenDataDetector/xml/OpenDataDetector.xml"
+   print(f"Detector: {os.environ['FCCcore']}/OpenDataDetector/xml/OpenDataDetector.xml")
 ## Lorentz boost for the crossing angle, in radian!
 SIM.enableDetailedShowerMode = False
 SIM.enableG4GPS = False
@@ -29,7 +28,7 @@ SIM.enableGun = True
 SIM.numberOfEvents = 100
 ## Outputfile from the simulation,only lcio output is supported
 #SIM.outputFile = "dummyOutput_edm4hep.root" ##"dummyOutput.slcio"
-SIM.outputFile = "singleShower_ODD_cells_10GeV_100showers_gamma_theta1.57_phi0_edm4hep.root"
+SIM.outputFile = "singleShower_ODD_cells_mode2_10GeV_100showers_gamma_theta1.57_phi0_edm4hep.root"
 
 ## Physics list to use in simulation
 SIM.physicsList = None
@@ -73,19 +72,16 @@ SIM.vertexSigma = [0.0, 0.0, 0.0, 0.0]
 ##
 ################################################################################
 
-##  set the calorimeter action that works both for full sim scoring only in the single slice (defined by ID below)
-##      as well as for fast simulation as long as all absorbers are marked as sensitive in XML
-##    TODO: fix for hadronic calorimetry, right now it is ignored so test only with EM showers
-# SIM.action.calo = ("Geant4CalorimeterAction") # For detailed mode: ,{'HitCreationMode': 2,})
-SIM.action.calo = ('Geant4FullFastCalorimeterAction', {'sensitiveEMSlice': 4, 'sensitiveHadSlice': 3})
+##  set the calorimeter action to the default scoring
+SIM.action.calo = ("Geant4CalorimeterAction", {'HitCreationMode': 2,})
 
 ##  create a map of patterns and actions to be applied to sensitive detectors
 ##         example: SIM.action.mapActions['tpc'] = "TPCSDAction"
 SIM.action.mapActions = {}
 
-##  set the default tracker action 
-#SIM.action.tracker =  ('Geant4VoidSensitiveAction')
-SIM.action.tracker =  ('Geant4TrackerWeightedAction', {'HitPositionCombination': 2, 'CollectSingleDeposits': False})
+##  set the default tracker action
+SIM.action.tracker =  ('Geant4VoidSensitiveAction')
+#SIM.action.tracker =  ('Geant4TrackerWeightedAction', {'HitPositionCombination': 2, 'CollectSingleDeposits': False})
 
 ################################################################################
 ## Configuration for the magnetic field (stepper)
@@ -101,7 +97,7 @@ SIM.action.tracker =  ('Geant4TrackerWeightedAction', {'HitPositionCombination':
 #SIM.field.min_chord_step = 1.e-2*mm
 #SIM.field.stepper = "HelixSimpleRunge"
 
-################################################################################
+###############################################################################
 ## Configuration for sensitive detector filters
 ##
 ##   Set the default filter for tracker or caliromter
