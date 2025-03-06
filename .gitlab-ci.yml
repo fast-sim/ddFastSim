@@ -36,7 +36,7 @@ run-ddfastsim-pgun:
     - mkdir test && cd test
     - source ${KEY4HEP_SETUP}
     - source ../install/bin/thisDDFastSim.sh
-    - ddsim --steeringFile ../install/options/Par04/Par04_ddsim_steer_dataset2_mesh_pgun.py --gun.energy 1*GeV --gun.part gamma --numberOfEvents 100 --compactFile ../install/Detector/xml/Par04_fullsim.xml --macroFile ../install/options/Par04/macro_pgun.mac --outputFile ddsim_Par04_gamma_100events_1GeV_edm4hep.root
+    - LD_PRELOAD="../install/lib/libDDFastSimdetector.so ../install/lib/libDDFastSim.so" ddsim --steeringFile ../install/options/Par04/Par04_ddsim_steer_dataset2_mesh_pgun.py --gun.energy 1*GeV --gun.part gamma --numberOfEvents 100 --compactFile ../install/Detector/xml/Par04_fullsim.xml --macroFile ../install/options/Par04/macro_pgun.mac --outputFile ddsim_Par04_gamma_100events_1GeV_edm4hep.root
 
 run-ddfastsim-gps:
   tags:
@@ -54,7 +54,7 @@ run-ddfastsim-gps:
     - mkdir test && cd test
     - source ${KEY4HEP_SETUP}
     - source ../install/bin/thisDDFastSim.sh
-    - ddsim --steeringFile ../install/options/Par04/Par04_ddsim_steer_dataset2_mesh_gps.py --numberOfEvents 100 --compactFile ../install/Detector/xml/Par04_fullsim.xml --macroFile ../install/options/Par04/macro_gps.mac --outputFile ddsim_Par04_gamma_100events_GPS_edm4hep.root
+    - LD_PRELOAD="../install/lib/libDDFastSimdetector.so ../install/lib/libDDFastSim.so" ddsim --steeringFile ../install/options/Par04/Par04_ddsim_steer_dataset2_mesh_gps.py --numberOfEvents 100 --compactFile ../install/Detector/xml/Par04_fullsim.xml --macroFile ../install/options/Par04/macro_gps.mac --outputFile ddsim_Par04_gamma_100events_GPS_edm4hep.root
 
 run-plots-pgun:
   tags:
