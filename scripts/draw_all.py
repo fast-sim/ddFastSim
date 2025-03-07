@@ -1,6 +1,9 @@
 root_not_found=False
 try:
-    from ROOT import RDataFrame
+    from ROOT import RDataFrame, gSystem, gInterpreter
+    gSystem.Load("libedm4hep")
+    gInterpreter.Declare("#include <edm4hep/SimCalorimeterHitData.h>")
+    gInterpreter.Declare("#include <edm4hep/MCParticleData.h>")
 except ModuleNotFoundError:
     root_not_found=True
     pass
@@ -35,15 +38,6 @@ parser.add_argument('--axisRange', type=float, nargs=2, required=False)
 parser.add_argument('--ncpus', type=int, default=4, help='Number of CPUs to use in analysis')
 parser.add_argument('-n', '--numEvents', type=int, default=100, help='Number of events to plot')
 args = parser.parse_args()
-
-ROOT.gSystem.Load("libedm4hep")
-ROOT.gInterpreter.Declare("#include <edm4hep/SimCalorimeterHitData.h>")
-ROOT.gInterpreter.Declare("#include <edm4hep/CalorimeterHitData.h>")
-ROOT.gInterpreter.Declare("#include <edm4hep/MCParticleData.h>")
-ROOT.gInterpreter.Declare("#include <edm4hep/ReconstructedParticleData.h>")
-ROOT.gInterpreter.Declare("#include <edm4hep/RecoMCParticleLinkCollection.h>")
-ROOT.gInterpreter.Declare("#include <edm4hep/CaloHitMCParticleLinkCollection.h>")
-ROOT.gInterpreter.Declare("#include <edm4hep/ClusterData.h>")
 
 # files
 filename_root = args.infileRoot
