@@ -36,6 +36,15 @@ parser.add_argument('--ncpus', type=int, default=4, help='Number of CPUs to use 
 parser.add_argument('-n', '--numEvents', type=int, default=100, help='Number of events to plot')
 args = parser.parse_args()
 
+ROOT.gSystem.Load("libedm4hep")
+ROOT.gInterpreter.Declare("#include <edm4hep/SimCalorimeterHitData.h>")
+ROOT.gInterpreter.Declare("#include <edm4hep/CalorimeterHitData.h>")
+ROOT.gInterpreter.Declare("#include <edm4hep/MCParticleData.h>")
+ROOT.gInterpreter.Declare("#include <edm4hep/ReconstructedParticleData.h>")
+ROOT.gInterpreter.Declare("#include <edm4hep/RecoMCParticleLinkCollection.h>")
+ROOT.gInterpreter.Declare("#include <edm4hep/CaloHitMCParticleLinkCollection.h>")
+ROOT.gInterpreter.Declare("#include <edm4hep/ClusterData.h>")
+
 # files
 filename_root = args.infileRoot
 if not args.infileRoot:
