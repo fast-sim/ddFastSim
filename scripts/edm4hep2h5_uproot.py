@@ -72,13 +72,14 @@ def main(argv):
         #energy_MC = events["MCParticles/MCParticles.energy"].array(library="ak")*1.e3
 
         num_showers = len(energy_MC)
+        print('num_showers: ', num_showers)
 
         all_showers = []
         # loop over events
         for event in range(num_showers):
             # Initialize a 3D array with shape nb_events, nb_cells in x,y,z
             shower = np.zeros((num_cells_R, num_cells_phi, num_cells_z))
-            for cell in range(len(rhoCell)):
+            for cell in range(len(rhoCell[event])):
                 if (
                     (int(rhoCell[event][cell]) < num_cells_R)
                     and (int(phiCell[event][cell]) < num_cells_phi)
