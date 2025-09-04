@@ -11,7 +11,7 @@ import h5py
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from math import pi,log10,pow
+from math import pi,log10
 import argparse
 
 parser = argparse.ArgumentParser(description='Validation plots')
@@ -25,6 +25,7 @@ group.add_argument('--plotNumcells', action='store_true')
 group.add_argument('--plotLong', action='store_true')
 group.add_argument('--plotTrans', action='store_true')
 group.add_argument('--plotIncident', action='store_true')
+parser.add_argument('--noRatio', action='store_true', help="By default for more than 1 file a ratio is plotted. Use this to just draw plots.")
 parser.add_argument('--dataset', type=int, choices=[2, 3],required=True)
 parser.add_argument('--infileRoot',nargs='+')
 parser.add_argument('--infileEdm4hep',nargs='+')
@@ -92,26 +93,29 @@ if args.legendRoot:
 if args.legendH5:
     legend_h5 = args.legendH5
 if len(legend_root) < len(filename_root) + len(filename_edm4hep):
-    if args.legend:
+    if legend_root:
         print("Use the same length for legend and files")
         exit(-1)
     else:
         for i in range(len(filename_root)+len(filename_edm4hep)):
             legend_root.append(legend_root[0])
 if len(legend_h5) < len(filename_h5):
-    if args.legend:
+    if legend_h5:
         print("Use the same length for legend and files")
         exit(-1)
     else:
         for i in range(len(filename_h5)):
             legend_h5.append(legend_h5[0])
 
-colours=['g','b','r','o']
+colours=['b','r','orange']
 # files
 df_list = []
 events_list = []
+found_angle_theta = False
+found_angle_phi = False
 for file_root in filename_root:
     if args.energyFilter:
+        df = RDataFrame("virtualReadout", file_root)
         filtered = df.Filter(f"MCParticles.momentum > {args.energyFilter[0]} && EnergyMC < {args.energyFilter[1]}").Range(num_events)
         df_list.append(filtered)
         events_list.append(df_list[-1].AsNumpy(columns=["EnergyCell", "rhoCell", "zCell", "phiCell"]))
@@ -155,19 +159,21 @@ h5_eMC_list = []
 h5_thetaMC_list = []
 h5_phiMC_list = []
 h5_showers_list = []
+
 for file_h5 in filename_h5:
-    data = h5py.File(file_h5)
-    randomIndices=random.sample(range(0,data[list(data.keys())[0]].shape[0]),num_events)
-    h5_eMC_list.append(np.array([ data['incident_energy'][i] for i in randomIndices ]))
-    found_angle_theta = False
-    found_angle_phi = False
-    if "incident_theta" in data.keys():
-        h5_thetaMC_list.append(np.array([ data['incident_theta'][i] for i in randomIndices ]))
-        found_angle_theta = True
-    if "incident_phi" in data.keys():
-        h5_phiMC_list.append(np.array([ data['incident_phi'][i] for i in randomIndices ]))
-        found_angle_phi = True
-    h5_showers_list.append(np.array([ data['showers'][i] for i in randomIndices ]))
+    with h5py.File(file_h5, 'r') as data:
+        # Slice the first num_events entries
+        h5_eMC_list.append(data['incident_energy'][:num_events])
+
+        if 'incident_theta' in data:
+            h5_thetaMC_list.append(data['incident_theta'][:num_events])
+            found_angle_theta = True
+
+        if 'incident_phi' in data:
+            h5_phiMC_list.append(data['incident_phi'][:num_events])
+            found_angle_phi = True
+
+        h5_showers_list.append(data['showers'][:num_events])
 
 def energy_ratio_root(fig, events, colour, label):
     ratios = []
@@ -177,12 +183,13 @@ def energy_ratio_root(fig, events, colour, label):
     return np.array(ratios).mean(), fig.hist(ratios, bins=np.linspace(0.,1.2,200), facecolor=colour, alpha=0.4, label=label, density = True)
 
 def energy_ratio_hdf5(fig, energies, showers, colour, label):
-    ratios = []
-    print(showers.shape)
-    for en, sh in zip(energies,showers):
-        edep = np.sum(sh)
-        ratios.append(edep/en)
-    return np.array(ratios).mean(), fig.hist(ratios, bins=np.linspace(0.,1.2,200), facecolor=colour, alpha=0.4, label=label, density = True)
+    # Vectorized calculation
+    total_energy = np.sum(showers, axis=(1,2,3))
+    ratio = total_energy / energies
+    print(ratio.shape, total_energy.shape, energies.shape)
+    fig.hist(ratio, facecolor=colour, alpha=0.4, label=label, density=True)
+    print("mean = ", ratio.mean())
+    return ratio.mean(), ratio
 
 def energy_deposited_root(fig, events, colour, label):
     result = []
@@ -192,19 +199,8 @@ def energy_deposited_root(fig, events, colour, label):
     return np.array(result).mean(), fig.hist(result, bins=np.linspace(min(result),max(result),200), facecolor=colour, alpha=0.4, label=label, density = True)
 
 def energy_deposited_hdf5(fig, showers, colour, label):
-    result = []
-    for sh in showers:
-        edep = np.sum(sh)
-        result.append(edep)
-    return np.array(result).mean(), fig.hist(result, bins=np.linspace(min(result),max(result),200), facecolor=colour, alpha=0.4, label=label, density = True)
-
-def energy_ratio_hdf5(fig, energies, showers, colour, label):
-    result = []
-    print(showers.shape)
-    for sh in showers:
-        edep = np.sum(sh)
-        result.append(edep)
-    return np.array(result).mean(), fig.hist(result, bins=np.linspace(min(result),max(result),200), facecolor=colour, alpha=0.4, label=label, density = True)
+    energy = np.sum(showers, axis=(1,2,3))
+    return np.array(energy).mean(), fig.hist(energy, bins=np.linspace(min(energy),max(energy),200), facecolor=colour, alpha=0.4, label=label, density = True)
 
 def num_cells_root(fig,events, colour, label):
     all_num = []
@@ -216,11 +212,14 @@ def num_cells_root(fig,events, colour, label):
         mybins=np.linspace(1e2,2e5,50)
     return np.array(all_num).mean(), fig.hist(all_num, bins=mybins, facecolor=colour, alpha=0.4, label=label, density = True)
 
+def num_cells_hdf5(fig, showers, colour, label):
+    # Count non-zero cells
+    ax = fig.gca()
+    ax.hist(counts, bins=100, color=colour, label=label, histtype='step', density=True)
+    return fig
+
 def num_cells_hdf5(fig,showers, colour, label):
-    all_num = []
-    for sh in showers:
-        sh = sh[sh != 0]
-        all_num.append(len(sh))
+    all_num = np.count_nonzero(showers, axis=(1,2,3))
     if args.axisRange:
         mybins=np.linspace(args.axisRange[0], args.axisRange[1],50)
     else:
@@ -243,14 +242,12 @@ def cell_energy_log_root(fig,events, colour, label):
             all_logEn.append(val)
     return fig.hist(all_logEn, bins=np.linspace(-3,4,100), facecolor=colour, alpha=0.4, label=label, density = True)
 
-def cell_energy_log_hdf5(fig,showers, colour, label):
-    all_logEn = []
-    for sh in showers:
-        sh = sh[sh != 0]
-        sumG4 = np.sum(sh)
-        for val in [log10(en) for en in sh]:
-            all_logEn.append(val)
-    return fig.hist(all_logEn, bins=np.linspace(-3,4,100), facecolor=colour, alpha=0.4, label=label, density = True)
+def cell_energy_log_hdf5(fig, showers, colour, label):
+    energies = showers[showers > 0]  # 1D array of all non-zero energies
+    all_logEn = np.log10(energies)
+    hist_output = fig.hist(all_logEn, bins=np.linspace(-3, 4, 100),
+                          facecolor=colour, alpha=0.4, label=label, density=True)
+    return hist_output
 
 def phi_distribution_root(fig,events, colour):
     all_phis = []
@@ -263,7 +260,7 @@ def phi_distribution_root(fig,events, colour):
             all_phis.append(val)
         for val in [energies[i] for i in range(len(phi_ids))]:
             all_weights.append(val)
-    return fig.hist(all_phis, bins=np.linspace((-num_phi+0.5)*size_phi, (num_phi - 0.5)*size_phi,2*num_phi-1), weights=all_weights , facecolor=colour, alpha=0.5, label=label, density = True)
+    return fig.hist(all_phis, bins=np.linspace((-num_phi+0.5)*size_phi, (num_phi - 0.5)*size_phi,2*num_phi-1), weights=all_weights , facecolor=colour, alpha=0.5, label=label, density = False)
 
 def long_profile_root(fig,events, colour,label, lowGran = False):
     if lowGran:
@@ -280,7 +277,7 @@ def long_profile_root(fig,events, colour,label, lowGran = False):
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
-    return fig.hist(np.concatenate(events["zCell"]), bins=np.linspace(0,numz-1,numz), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=0.4, label=label, density = True)
+    return fig.hist(np.concatenate(events["zCell"]), bins=np.linspace(0,numz-1,numz), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def long_profile_hdf5(fig,showers, colour,label, lowGran = False):
     if lowGran:
@@ -297,9 +294,10 @@ def long_profile_hdf5(fig,showers, colour,label, lowGran = False):
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
+    profile = np.sum(showers, axis=(1,2))
+    mean_profile = np.mean(profile, axis=0)
     z_ids = np.linspace(0, numz-1, numz)
-    energies = [np.sum(showers[:,:,:,int(i)]) for i in z_ids]
-    return fig.hist(z_ids, bins=np.linspace(0,numz-1,numz), weights=energies , facecolor=colour, alpha=0.4, label=label, density = True)
+    return fig.hist(z_ids, bins=z_ids, weights=mean_profile , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def trans_profile_root(fig,events, colour,label, lowGran = False):
     if lowGran:
@@ -316,7 +314,7 @@ def trans_profile_root(fig,events, colour,label, lowGran = False):
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
-    return fig.hist(np.concatenate(events["rhoCell"]), bins=np.linspace(0,numr-1,numr), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=0.4, label=label, density = True)
+    return fig.hist(np.concatenate(events["rhoCell"]), bins=np.linspace(0,numr-1,numr), weights=np.concatenate(events["EnergyCell"]) , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def trans_profile_hdf5(fig,showers, colour,label,lowGran=False):
     if lowGran:
@@ -333,9 +331,19 @@ def trans_profile_hdf5(fig,showers, colour,label,lowGran=False):
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
-    r_ids = np.linspace(0, numr-1, numr)
-    energies = [np.sum(showers[:,int(i)]) for i in r_ids]
-    return fig.hist(r_ids, bins=np.linspace(0,numr-1,numr), weights=energies , facecolor=colour, alpha=0.4, label=label, density = True)
+
+    # Sum over longitudinal axis (z)
+    transverse_2D = np.sum(showers, axis=3)  # shape: (N_showers, num_r, num_phi)
+
+    # Sum over phi to get radial profile per shower
+    radial_profile_per_shower = np.sum(transverse_2D, axis=2)  # shape: (N_showers, num_r)
+
+    # Mean over all showers
+    mean_radial_profile = np.mean(radial_profile_per_shower, axis=0)  # shape: (num_r,)
+    r_axis = np.arange(numr) * sizer + sizer/2
+    r_axis_bins = np.arange(numr) * sizer
+
+    return fig.hist(r_axis, bins=r_axis_bins, weights=mean_radial_profile , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def long_moments_root(fig_first, fig_second, events, colour, label,lowGran=False):
     if lowGran:
@@ -362,7 +370,7 @@ def long_moments_root(fig_first, fig_second, events, colour, label,lowGran=False
         second = np.sum([pow(z_ids[i] * sizez - first, 2) * energies[i] for i in range(len(z_ids))])
         second /= sumG4
         all_second_moments.append(second)
-    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.4*numz*sizez, 32) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numz*sizez,2) / 35., 32) , facecolor=colour, alpha=0.4, label=label, density = True)
+    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.4*numz*sizez, 32) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numz*sizez,2) / 35., 32) , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def long_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=False):
     if lowGran:
@@ -379,19 +387,25 @@ def long_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=Fals
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
-    all_first_moments = []
-    all_second_moments = []
-    for sh in showers:
-        z_ids = np.linspace(0, numz-1, numz)
-        energies = [np.sum(sh[:,:,int(i)]) for i in np.linspace(0,numz-1,numz)]
-        sumG4 = np.sum(energies)
-        first = np.sum([z_ids[i] * sizez * energies[i] for i in range(len(z_ids))])
-        first /= sumG4
-        all_first_moments.append(first)
-        second = np.sum([pow(z_ids[i] * sizez - first, 2) * energies[i] for i in range(len(z_ids))])
-        second /= sumG4
-        all_second_moments.append(second)
-    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.4*numz*sizez, 32) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numz*sizez,2) / 35., 32) , facecolor=colour, alpha=0.4, label=label, density = True)
+    profile = np.sum(showers, axis=(1,2))  # shape: (N_showers, numz)
+
+    z_positions = np.linspace(0, numz - 1, numz) * sizez  # shape (numz,)
+    # Total energy per shower
+    total_energy = np.sum(profile, axis=1)[:, np.newaxis]  # shape: (N_showers, 1)
+
+    # First moment: sum(z * energy) / total_energy
+    first_moments = np.sum(profile * z_positions, axis=1) / total_energy[:,0]  # shape: (N_showers,)
+
+    # Second moment: sum((z - mean_z)^2 * energy) / total_energy
+    second_moments = np.sum(profile * (z_positions - first_moments[:, np.newaxis])**2, axis=1) / total_energy[:,0]
+
+    # Histograms (same bins as original)
+    fig1_hist = fig_first.hist(first_moments, bins=np.linspace(0, 0.5*numz*sizez, 32),
+                               facecolor=colour, alpha=0.4, label=label, density=False)
+    fig2_hist = fig_second.hist(second_moments, bins=np.linspace(0, (numz*sizez)**2 / 35., 32),
+                                facecolor=colour, alpha=0.4, label=label, density=False)
+
+    return fig1_hist, fig2_hist
 
 def trans_moments_root(fig_first, fig_second, events, colour, label, lowGran = False):
     if lowGran:
@@ -435,19 +449,30 @@ def trans_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=Fal
         sizer = size_r
         sizephi = size_phi
         sizez = size_z
-    all_first_moments = []
-    all_second_moments = []
-    for sh in showers:
-        r_ids = np.linspace(0, numr-1, numr)
-        energies = [np.sum(sh[int(i)]) for i in np.linspace(0,numr-1,numr)]
-        sumG4 = np.sum(energies)
-        first = np.sum([r_ids[i] * sizer * energies[i] for i in range(len(r_ids))])
-        first /= sumG4
-        all_first_moments.append(first)
-        second = np.sum([pow(r_ids[i] * sizer - first, 2) * energies[i] for i in range(len(r_ids))])
-        second /= sumG4
-        all_second_moments.append(second)
-    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.75*numr*sizer,128) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numr*sizer,2) / 8., 128) , facecolor=colour, alpha=0.4, label=label, density = True)
+
+    # Radial positions in mm
+    r_positions = np.linspace(0, numr - 1, numr) * sizer  # shape (numr,)
+
+    # Sum over longitudinal (z) and angular (phi) directions to get transverse profile
+    # showers shape: (N_showers, num_r, num_phi, numz)
+    profile = np.sum(showers, axis=(2,3))  # shape: (N_showers, numr)
+
+    # Total energy per shower
+    total_energy = np.sum(profile, axis=1)[:, np.newaxis]  # shape: (N_showers, 1)
+
+    # First moment: mean radial position weighted by energy
+    first_moments = np.sum(profile * r_positions, axis=1) / total_energy[:,0]  # shape: (N_showers,)
+
+    # Second moment: variance of radial distribution weighted by energy
+    second_moments = np.sum(profile * (r_positions - first_moments[:, np.newaxis])**2, axis=1) / total_energy[:,0]
+
+    # Histograms (same bins as original transverse calculation)
+    fig1_hist = fig_first.hist(first_moments, bins=np.linspace(0, 0.4*numr*sizer, 32),
+                               facecolor=colour, alpha=0.4, label=label, density=False)
+    fig2_hist = fig_second.hist(second_moments, bins=np.linspace(0, (numr*sizer)**2 / 35., 32),
+                                facecolor=colour, alpha=0.4, label=label, density=False)
+
+    return fig1_hist, fig2_hist
 
 def plot_cell_energy():
     fig1, (ax1) = plt.subplots(1, 1, figsize=(9,7), gridspec_kw={'height_ratios': [1]})
@@ -462,7 +487,7 @@ def plot_cell_energy():
     fig1.savefig(args.outfile+'cell_energy_lin.png')
 
 def plot_cell_log_energy():
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         fig1, (ax1, ax1b) = plt.subplots(2, 1, figsize=(9,12), gridspec_kw={'height_ratios': [3, 1]})
     else:
         fig1, (ax1) = plt.subplots(1, 1, figsize=(9,7), gridspec_kw={'height_ratios': [1]})
@@ -476,14 +501,14 @@ def plot_cell_log_energy():
         (vals, edges, _) = cell_energy_log_hdf5(ax1,h5_showers_list[it],colours[it+len(events_list)],legend_h5[it])
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
-    ax1.set_xlabel('log10(E//MeV)')
+    ax1.set_xlabel('log10(E/MeV)')
  #   ax1.set_ylim(bottom=1e-6)
     ax1.set_yscale('log')
     ax1.set_ylabel('Entries')
     ax1.set_title('Cell energy distribution')
     ax1.grid(True)
     ax1.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         ax1b.set_ylabel('ratio')
         bincenter = 0.5 * (edges_of_bins_x1[0][1:] + edges_of_bins_x1[0][:-1])
         if len(events_list) > 0:
@@ -506,7 +531,7 @@ def plot_cell_log_energy():
     fig1.savefig(args.outfile+'cell_energy_log.png')
 
 def plot_num_cells():
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         fig3, (ax3, ax3b) = plt.subplots(2, 1, figsize=(9,12), gridspec_kw={'height_ratios': [3, 1]})
     else:
         fig3, (ax3) = plt.subplots(1, 1, figsize=(9,7), gridspec_kw={'height_ratios': [1]})
@@ -525,7 +550,7 @@ def plot_num_cells():
     ax3.set_title('Number of cells with E>0.5 keV')
     ax3.grid(True)
     ax3.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         ax3b.set_ylabel('ratio')
         bincenter = 0.5 * (edges_of_bins_x1[0][1:] + edges_of_bins_x1[0][:-1])
         if len(events_list) > 0:
@@ -545,10 +570,10 @@ def plot_num_cells():
         ax3b.set_ylim(0.25,4)
         ax3b.legend()
     fig3.tight_layout()
-    fig3.savefig(args.outfile+'num_cells')
+    fig3.savefig(args.outfile+'num_cells.png')
 
 def plot_energy_deposited():
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         fig4, (ax4, ax4b) = plt.subplots(2, 1,figsize=(9, 12), gridspec_kw={'height_ratios': [3, 1]})
     else:
         fig4, (ax4) = plt.subplots(1, 1,figsize=(9, 7), gridspec_kw={'height_ratios': [1]})
@@ -569,7 +594,7 @@ def plot_energy_deposited():
     ax4.set_title('Energy deposited')
     ax4.grid(True)
     ax4.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         ax4b.set_ylabel('ratio')
         bincenter = 0.5 * (edges_of_bins_x1[0][1:] + edges_of_bins_x1[0][:-1])
         if len(events_list) > 0:
@@ -588,10 +613,10 @@ def plot_energy_deposited():
         ax4b.legend()
         # ax4b.set_ylim(0.25,4)
     fig4.tight_layout()
-    fig4.savefig(args.outfile+'energy_deposited_small')
+    fig4.savefig(args.outfile+'energy_deposited_small.png')
 
 def plot_energy_ratio():
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         fig4, (ax4, ax4b) = plt.subplots(2, 1,figsize=(9, 12), gridspec_kw={'height_ratios': [3, 1]})
     else:
         fig4, (ax4) = plt.subplots(1, 1,figsize=(9, 7), gridspec_kw={'height_ratios': [1]})
@@ -603,16 +628,16 @@ def plot_energy_ratio():
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
     for it in range(len(h5_eMC_list)):
-        mean_eratio_hdf5, (vals, edges, _) = energy_ratio_hdf5(ax4, h5_eMC_list[it], h5_showers_list[it], colours[it+len(events_list)], legend_h5[it])
+        mean_eratio_hdf5, ratios = energy_ratio_hdf5(ax4, h5_eMC_list[it], h5_showers_list[it], colours[it+len(events_list)], legend_h5[it])
         ax4.axvline(mean_eratio_hdf5, color=colours[it+len(events_list)], linestyle='dashed', linewidth=1, label=fr"<E> = {mean_eratio_hdf5:.2f}")
-        val_of_bins_x1.append(vals)
-        edges_of_bins_x1.append(edges)
+        val_of_bins_x1.append(ratios)
+        edges_of_bins_x1.append(np.linspace(0., 1.2, 200))
     ax4.set_xlabel('$E_{dep} / E_{MC}$')
     ax4.set_ylabel('Normalized entries')
     ax4.set_title('Ratio of energy deposited to incident')
     ax4.grid(True)
     ax4.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         ax4b.set_ylabel('ratio')
         bincenter = 0.5 * (edges_of_bins_x1[0][1:] + edges_of_bins_x1[0][:-1])
         if len(events_list) > 0:
@@ -631,11 +656,11 @@ def plot_energy_ratio():
         ax4b.legend()
         ax4b.set_ylim(0.25,4)
     fig4.tight_layout()
-    fig4.savefig(args.outfile+'energy_ratio_small')
+    fig4.savefig(args.outfile+'energy_ratio_small.png')
 
 
 def plot_incident():
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         fig, ((axE, axT, axP), (axEr, axTr, axPr)) = plt.subplots(2, 3 ,figsize=(21, 9), gridspec_kw={'height_ratios': [3, 1]})
     else:
         fig, ((axE, axT, axP)) = plt.subplots(1, 3 ,figsize=(21, 7), gridspec_kw={'height_ratios': [1]})
@@ -664,8 +689,8 @@ def plot_incident():
     axE.set_ylabel('Entries')
     axE.set_title('Incident energy distribution')
     axE.grid(True)
-    axE.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    axE.legend(loc="lower right")
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         axEr.set_ylabel('ratio')
         bincenter = 0.5 * (edges_of_bins_E[0][1:] + edges_of_bins_E[0][:-1])
         if len(events_list) > 0:
@@ -681,7 +706,7 @@ def plot_incident():
             ratio = np.divide(val_of_bins_E[it], val_of_bins_E[0], out=ratio,where=(val_of_bins_E[0] != 0))
             error = np.divide(val_of_bins_E[it] * np.sqrt(val_of_bins_E[0]) + val_of_bins_E[0] * np.sqrt(val_of_bins_E[it]),np.power(val_of_bins_E[0], 2), where=(val_of_bins_E[0] != 0))
             axEr.scatter(edges_of_bins_E[it][:-1], ratio, alpha=0.4, color=colours[it],label=current_legend.split(",")[0]+"/"+legend_zero.split(",")[0])
-        axEr.legend()
+        axEr.legend(loc="lower right")
         axEr.set_ylim(0.25,4)
     if found_angle_theta:
         #theta distribution
@@ -693,14 +718,14 @@ def plot_incident():
             (vals, edges, _) = axT.hist(h5_thetaMC_list[it], bins = np.linspace(0,pi,30), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
             val_of_bins_T.append(vals)
             edges_of_bins_T.append(edges)
-        axT.set_xlabel('$\theta_{MC}$ (rad)')
+        axT.set_xlabel(r'$\theta_{MC}$ (rad)')
         axT.set_ylim(bottom=1)
         axT.set_yscale('log')
         axT.set_ylabel('Entries')
-        axT.set_title('Incident energy distribution')
+        axT.set_title('Incident polar angle distribution')
         axT.grid(True)
         axT.legend(loc='lower left')
-        if len(events_list)+len(h5_eMC_list) > 1:
+        if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
             axTr.set_ylabel('ratio')
             bincenter = 0.5 * (edges_of_bins_T[0][1:] + edges_of_bins_T[0][:-1])
             for it in range(1,len(events_list)+len(h5_eMC_list)):
@@ -728,10 +753,10 @@ def plot_incident():
         axP.set_ylim(bottom=1)
         axP.set_yscale('log')
         axP.set_ylabel('Entries')
-        axP.set_title('Incident energy distribution')
+        axP.set_title('Incident azimuthal angle distribution')
         axP.grid(True)
         axP.legend(loc='lower left')
-        if len(events_list)+len(h5_eMC_list) > 1:
+        if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
             axPr.set_ylabel('ratio')
             bincenter = 0.5 * (edges_of_bins_P[0][1:] + edges_of_bins_P[0][:-1])
             for it in range(1,len(events_list)+len(h5_eMC_list)):
@@ -746,10 +771,10 @@ def plot_incident():
             axPr.legend()
             axPr.set_ylim(0.25,4)
     fig.tight_layout()
-    fig.savefig(args.outfile+'incident_distr')
+    fig.savefig(args.outfile+'incident_distr.png')
 
 def plot_longitudinal():
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         fig5, ((ax5a, ax5b, ax5c),(ax5aa, ax5bb, ax5cc)) = plt.subplots(2, 3, figsize=(21,9), gridspec_kw={'height_ratios': [3, 1]})
     else:
         fig5, ((ax5a, ax5b, ax5c)) = plt.subplots(1, 3, figsize=(21,7), gridspec_kw={'height_ratios': [1]})
@@ -778,22 +803,22 @@ def plot_longitudinal():
         val_of_bins3_x1.append(vals3)
         edges_of_bins3_x1.append(edges3)
     ax5a.set_xlabel('z (ID)')
-    ax5a.set_ylabel('$< E>$ (MeV)')
+    ax5a.set_ylabel(r'$\langle E \rangle$ (MeV)')
     ax5a.set_title('Longitudinal profile')
     ax5a.grid(True)
     ax5a.legend()
     fig5.tight_layout()
-    ax5b.set_xlabel('$<\lambda>$ (mm)')
+    ax5b.set_xlabel(r'$\langle\lambda\rangle$ (mm)')
     ax5b.set_ylabel('Entries')
     ax5b.set_title('Longitudinal first moment')
-    ax5c.set_xlabel('$<\lambda^{2}>$ (mm^{2})')
+    ax5c.set_xlabel(r'$\langle\lambda^{2}\rangle$ (mm^{2})')
     ax5c.set_ylabel('Entries')
     ax5c.set_title('Longitudinal second moment')
     ax5b.grid(True)
     ax5c.grid(True)
     ax5b.legend()
     ax5c.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         ax5aa.set_ylabel('ratio')
         if len(events_list) > 0:
             legend_zero = legend_root[0]
@@ -835,10 +860,10 @@ def plot_longitudinal():
         ax5cc.legend()
         ax5cc.set_ylim(0.25,4)
     fig5.tight_layout()
-    fig5.savefig(args.outfile+'longitudinal_profile')
+    fig5.savefig(args.outfile+'longitudinal_profile.png')
 
 def plot_transverse():
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         fig6, ((ax6a, ax6b, ax6c),(ax6aa, ax6bb, ax6cc)) = plt.subplots(2, 3, figsize=(21,9), gridspec_kw={'height_ratios': [3, 1]})
     else:
         fig6, ((ax6a, ax6b, ax6c)) = plt.subplots(1, 3, figsize=(21,7), gridspec_kw={'height_ratios': [1]})
@@ -858,8 +883,8 @@ def plot_transverse():
         val_of_bins3_x1.append(vals3)
         edges_of_bins3_x1.append(edges3)
     for it in range(len(h5_eMC_list)):
-        (vals, edges, _) =trans_profile_hdf5(ax6a,h5_showers_list[it],colours[it+len(h5_eMC_list)],legend_h5[it], lowGran=ifLowGran)
-        (vals2, edges2, _), (vals3, edges3, _) =trans_moments_hdf5(ax6b,ax6c, h5_showers_list[it],colours[it+len(h5_eMC_list)],legend_h5[it], lowGran=ifLowGran)
+        (vals, edges, _) =trans_profile_hdf5(ax6a,h5_showers_list[it],colours[it+len(events_list)],legend_h5[it], lowGran=ifLowGran)
+        (vals2, edges2, _), (vals3, edges3, _) =trans_moments_hdf5(ax6b,ax6c, h5_showers_list[it],colours[it+len(events_list)],legend_h5[it], lowGran=ifLowGran)
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
         val_of_bins2_x1.append(vals2)
@@ -867,14 +892,14 @@ def plot_transverse():
         val_of_bins3_x1.append(vals3)
         edges_of_bins3_x1.append(edges3)
     ax6a.set_xlabel('r (ID)')
-    ax6a.set_ylabel('$< E >$ (MeV')
+    ax6a.set_ylabel(r'$\langle E \rangle$ (MeV')
     ax6a.set_title('Transverse profile')
     ax6a.set_yscale('log')
     ax6a.grid(True)
-    ax6b.set_xlabel('$<r>$ (mm)')
+    ax6b.set_xlabel(r'$\langle r\rangle$ (mm)')
     ax6b.set_ylabel('Entries')
     ax6b.set_title('Transverse first moment')
-    ax6c.set_xlabel('$< r^{2}>$(mm^{2})')
+    ax6c.set_xlabel(r'$\langle r^{2}\rangle$(mm^{2})')
     ax6c.set_ylabel('Entries')
     ax6c.set_title('Transverse second moment')
     ax6b.grid(True)
@@ -882,7 +907,7 @@ def plot_transverse():
     ax6a.legend()
     ax6b.legend()
     ax6c.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         ax6aa.set_ylabel('ratio')
         if len(events_list) > 0:
             legend_zero = legend_root[0]
@@ -924,7 +949,7 @@ def plot_transverse():
         ax6cc.legend()
         ax6cc.set_ylim(0.25,4)
     fig6.tight_layout()
-    fig6.savefig(args.outfile+'transverse_profile')
+    fig6.savefig(args.outfile+'transverse_profile.png')
 
 def plot_incident_energy():
     if len(events_list)+len(h5_eMC_list) > 1:
@@ -948,7 +973,7 @@ def plot_incident_energy():
     ax8.set_title('Incident energy distribution')
     ax8.grid(True)
     ax8.legend()
-    if len(events_list)+len(h5_eMC_list) > 1:
+    if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
         ax8b.set_ylabel('ratio')
         for it in range(1,len(events_list)):
             ratio = np.divide(val_of_bins_x1[it], val_of_bins_x1[0], where=(val_of_bins_x1[0] != 0))
@@ -957,7 +982,7 @@ def plot_incident_energy():
         ax8b.legend()
         ax8b.set_ylim(0.25,4)
     fig8.tight_layout()
-    fig8.savefig(args.outfile+'incident_energy')
+    fig8.savefig(args.outfile+'incident_energy.png')
 
 if args.plotEdep:
     plot_energy_deposited()
