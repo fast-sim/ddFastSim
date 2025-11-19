@@ -50,7 +50,7 @@ install(TARGETS ${PROJECT_NAME}
 
 dd4hep_instantiate_package(${PROJECT_NAME})
 
-add_library(${PROJECT_NAME}detector SHARED Detector/src/SimpleCylinder_geo.cpp Detector/src/SandwichCylinders_geo.cpp)
+add_library(${PROJECT_NAME}detector SHARED Detector/src/SimpleCylinder_geo.cpp Detector/src/SandwichCylinders_geo.cpp Detector/src/SimpleBox_geo.cpp Detector/src/SandwichPlanes_geo.cpp)
 target_link_libraries(${PROJECT_NAME}detector PUBLIC DD4hep::DDCore DD4hep::DDRec)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set_target_properties(${PROJECT_NAME}detector PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
