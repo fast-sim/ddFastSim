@@ -17,6 +17,7 @@ using dd4hep::Volume;
 using dd4hep::DetElement;
 using dd4hep::xml::Dimension;
 using dd4hep::PlacedVolume;
+using dd4hep::Position;
 
 namespace det {
 
@@ -39,9 +40,15 @@ static dd4hep::Ref_t createPlanes(dd4hep::Detector& lcdd, xml_h xmlElement,
   int numLayers = layer.repeat();
   int numSlicesPerLayer = layer.numChildren(_Unicode(slice));
   double thicknessLayer = 0;
+  double sliceOneThickness = 0;
+  int layerOneFlag = 0;
   for (xml_coll_t x_slice(layer, _Unicode(slice)); x_slice; ++x_slice) {
     xml_comp_t xSlice = x_slice;
     thicknessLayer += xSlice.thickness();
+	    if (layerOneFlag++ == 0){
+		sliceOneThickness += xSlice.thickness();
+	    }
+    layerOneFlag++;
   }
   lLog << MSG::INFO << " Creating " << numLayers << " layers with " << numSlicesPerLayer << "slices each" <<
     " and thickness of " << thicknessLayer << " cm." << endmsg;
@@ -52,16 +59,17 @@ static dd4hep::Ref_t createPlanes(dd4hep::Detector& lcdd, xml_h xmlElement,
   sd.setType(sdType.typeStr());
 
   // loop over layers
-  double layerFacePosition = 0.; /// Box is placed at origin
+  double layerFacePosition = -dimensions.z()/2.+sliceOneThickness; /// Box is placed at origin
   for (int iLayer = 0; iLayer < numLayers; iLayer++) {
     int sliceNumber = 0;
     for (xml_coll_t x_slice(layer, _Unicode(slice)); x_slice; ++x_slice) {
       xml_comp_t xSlice = x_slice;
       std::string sliceMaterial = xSlice.materialStr();
       double sliceThickness = xSlice.thickness();
-      dd4hep::Box layerShape(dimensions.x()/2., dimensions.y()/2., layerFacePosition/2. + sliceThickness); /// double check this placement is correct!
+      dd4hep::Box layerShape(dimensions.x()/2., dimensions.y()/2., sliceThickness/2.); /// double check this placement is correct!
+      lLog << MSG::INFO << " LayerShape.x(): " << layerShape.x() << " " << " LayerShape.y(): " << layerShape.y() << " " << " LayerShape.z(): " <<  layerShape.z() <<   endmsg;
       Volume layerVol(sliceMaterial+dd4hep::_toString(iLayer, "_layer%d")+dd4hep::_toString(sliceNumber, "_slice%d"), layerShape, lcdd.material(sliceMaterial));
-      PlacedVolume placedLayer = envelopeVolume.placeVolume(layerVol);
+      PlacedVolume placedLayer = envelopeVolume.placeVolume(layerVol, 1, Position(0., 0., layerFacePosition + sliceThickness/2.));
       lLog  << MSG::INFO << " Placing slice " << sliceNumber << " made of " << sliceMaterial << " within layer " << iLayer << " at layer face posiion " << layerFacePosition << " of thickness " << sliceThickness << endmsg;
       //placedLayer.addPhysVolID("layer", i);
       DetElement caloLayer(eCal, sliceMaterial+"_layer" +std::to_string(iLayer) + "_slice" + std::to_string(sliceNumber), numSlicesPerLayer * iLayer + sliceNumber);
@@ -77,7 +85,7 @@ static dd4hep::Ref_t createPlanes(dd4hep::Detector& lcdd, xml_h xmlElement,
 
   // Place envelope (or barrel) volume
   Volume motherVol = lcdd.pickMotherVolume(eCal);
-  PlacedVolume placedECal = motherVol.placeVolume(envelopeVolume);
+  PlacedVolume placedECal = motherVol.placeVolume(envelopeVolume, 1, Position(0., 0., -dimensions.z()/2.));
   placedECal.addPhysVolID("system", eCal.id());
   eCal.setPlacement(placedECal);
   return eCal;

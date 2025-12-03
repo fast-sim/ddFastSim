@@ -1,5 +1,14 @@
 #include "DD4hep/DetFactoryHelper.h"
 
+// todo: remove gaudi logging and properly capture output
+#define endmsg std::endl
+#define lLog std::cout
+namespace MSG {
+const std::string ERROR = " Error: ";
+const std::string DEBUG = " Debug: ";
+const std::string INFO  = " Info: ";
+}
+
 namespace det {
 static dd4hep::Ref_t
 createSimpleBox(dd4hep::Detector& lcdd, xml_h e, dd4hep::SensitiveDetector sensDet) {
@@ -13,7 +22,8 @@ createSimpleBox(dd4hep::Detector& lcdd, xml_h e, dd4hep::SensitiveDetector sensD
 
   // define 
   dd4hep::Box caloBox(boxDim.x()/2., boxDim.y()/2., boxDim.z()/2);
-
+    lLog << MSG::INFO << " CaloBoxDim half lengths: boxDim.x()/2 - " << boxDim.x()/2  << " boxDim.y()/2. - " << boxDim.y()/2. << " boxDim.z()/2-  " <<
+    boxDim.z()/2 << endmsg;
       //cylinderDim.rmin(), cylinderDim.rmax(), cylinderDim.dz(), cylinderDim.phi0(), cylinderDim.deltaphi());
 
   dd4hep::Volume boxVol(

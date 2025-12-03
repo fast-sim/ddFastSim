@@ -26,24 +26,24 @@
     <constant name="world_y" value="world_size"/>
     <constant name="world_z" value="world_size"/>
     <!-- layer dimensions -->
-    <constant name="Box_numLayers" value="90"/><!-- 1"/> -->
-    <constant name="Box_activeThickness" value="0.3*mm"/>
-    <constant name="Box_passiveThickness" value="1.4*mm"/>
-    <constant name="Box_layerThickness" value="Box_activeThickness+Box_passiveThickness"/><!-- 200.25*mm"/> -->
+    <constant name="Box_numLayers" value="45"/><!-- 1"/> -->
+    <constant name="Box_activeThickness" value="1.0*mm"/>
+    <constant name="Box_passiveThickness" value="5.0*mm"/>
+    <constant name="Box_layerThickness" value="Box_activeThickness+Box_passiveThickness"/>
     <!-- calorimeter volume -->
     <constant name="Box_x" value="10*cm"/>
     <constant name="Box_y" value="10*cm"/>
-    <constant name="Box_z" value="Box_numLayers*Box_layerThickness"/>
+    <constant name="Box_z" value="Box_numLayers*Box_layerThickness+Box_passiveThickness"/>
   </define>
 
   <display>
     <vis name="ecal_envelope" r="0.1" g="0.2" b="0.6" alpha="1" showDaughers="false" visible="true" />
   </display>
-  <!--
+ 
   <regions>
     <region name="preECalBarrelRegion" eunit="MeV" lunit="mm" cut="0.001" threshold="0.001"/>
   </regions>
-  -->
+  
 
   <readouts>
     <readout name="ECalBarrelCollection">
@@ -54,14 +54,13 @@
     </readout>
   </readouts>
 
-  <!-- This is just a region definition for a trigger plane in front of the calo- only needed if running fast sim in dd4hep
   <detectors>
+	  <!--  
       <detector name="preECalBarrel" type="SingleBox" region="preECalBarrelRegion">
         <dimensions x="Box_x" y="Box_y" z="Box_z" material="Air"/>
     </detector>
-  -->
+	  -->
 
-  <detectors>
     <detector id="1" name="EMCalBlock" type="SandwichPlanes" readout="ECalBarrelCollection">
       <type_flags type=" DetType_CALORIMETER + DetType_ELECTROMAGNETIC"/>
       <sensitive type="CalorimeterSD"/>
