@@ -20,6 +20,7 @@ dd4hep::sim::ScoreMeshEventAction::ScoreMeshEventAction(dd4hep::sim::Geant4Conte
     declareProperty("sizeOfRhoCells", fCellSizeRho = 2.325 );
     declareProperty("sizeOfPhiCells", fCellSizePhi = 2 * CLHEP::pi / 50. );
     declareProperty("sizeOfZCells", fCellSizeZ = 5.05 );
+    declareProperty("collectionName", fCollectionName = "ECalBarrelCollection" );
   }
 
         /// Default destructor
@@ -43,7 +44,7 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
   // Get hits collection ID (only once)
   if(fHitCollectionID == -1)
   {
-    fHitCollectionID = G4SDManager::GetSDMpointer()->GetCollectionID("ECalBarrelCollection");
+    fHitCollectionID = G4SDManager::GetSDMpointer()->GetCollectionID(fCollectionName);
   }
   // Get hits collection
   auto hitsCollection =
@@ -79,7 +80,7 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
 
   std::cout << "[EventAction::end()] Event action: Num of phi x rho x z cells: " << fCellNbPhi << " x "
             << fCellNbRho << " x " << fCellNbZ << std::endl;
-  std::cout << "[EventAction::end()] Number of hits in a collection: " <<  hitsCollection->GetSize() << std::endl;
+  std::cout << "[EventAction::end()] Number of hits in " << fCollectionName << ": " << hitsCollection->GetSize() << std::endl;
 
   // Fill histograms
   dd4hep::sim::Geant4Calorimeter::Hit* hit                  = nullptr;
