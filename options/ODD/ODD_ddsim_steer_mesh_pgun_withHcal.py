@@ -16,8 +16,8 @@ SIM = DD4hepSimulation()
 
 ## The compact XML file
 if "FCCcore" in os.environ:
-   SIM.compactFile = os.environ["FCCcore"]+"/odd/xml/OpenDataDetector_noTracker.xml"
-   print(f"Detector: {os.environ['FCCcore']}/odd/xml/OpenDataDetector_noTracker.xml")
+   SIM.compactFile = os.environ["FCCcore"]+"/OpenDataDetector/xml/OpenDataDetector_noTracker.xml"
+   print(f"Detector: {os.environ['FCCcore']}/OpenDataDetector/xml/OpenDataDetector_noTracker.xml")
 ## Lorentz boost for the crossing angle, in radian!
 SIM.enableDetailedShowerMode = False
 SIM.enableG4GPS = False
@@ -27,8 +27,8 @@ SIM.enableGun = True
 #SIM.inputFiles = [""]
 ## Macro file to execute for runType 'run' or 'vis'
 if "FCCcore" in os.environ:
-   SIM.macroFile = os.environ["FCCcore"]+"/options/ODD/ECalBarrelEndcap_singleEmMesh_pgun.mac"
-   print(f"Detector: {os.environ['FCCcore']}/options/ODD/ECalBarrelEndcap_singleEmMesh_pgun.mac")
+   SIM.macroFile = os.environ["FCCcore"]+"/ddfastsim/options/ODD/ECalBarrelEndcap_singleEmMesh_pgun.mac"
+   print(f"Detector: {os.environ['FCCcore']}/ddfastsim/options/ODD/ECalBarrelEndcap_singleEmMesh_pgun.mac")
 ## number of events to simulate, used in batch mode
 SIM.numberOfEvents = 10
 ## Outputfile from the simulation,only lcio output is supported
@@ -86,7 +86,7 @@ meshCellSizePhi = 2 * pi / meshCellNumPhi
 meshCellSizeZ = 5.05 * mm
 
 if "FCCcore" in os.environ:
-   with open(os.environ["FCCcore"]+"/options/ODD/mesh_parameters.yaml", 'r') as stream:
+   with open(os.environ["FCCcore"]+"/ddfastsim/options/ODD/mesh_parameters.yaml", 'r') as stream:
       try:
          mesh_parameters = yaml.safe_load(stream)
          meshCellNumRho = mesh_parameters["ecalMeshCellNumRho"]
@@ -107,7 +107,7 @@ hcalMeshCellSizePhi = 2 * pi / hcalMeshCellNumPhi
 hcalMeshCellSizeZ = 30.0 * mm
 
 if "FCCcore" in os.environ:
-   with open(os.environ["FCCcore"]+"/options/ODD/mesh_parameters.yaml", 'r') as stream:
+   with open(os.environ["FCCcore"]+"/ddfastsim/options/ODD/mesh_parameters.yaml", 'r') as stream:
       try:
          mesh_parameters = yaml.safe_load(stream)
          hcalMeshCellNumRho = mesh_parameters["hcalMeshCellNumRho"]
