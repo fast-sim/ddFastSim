@@ -40,6 +40,8 @@ class G4Event;
         private:
         /// Timer measurement from Geant4
         G4Timer fTimer;
+        /// Name of the hit collection to analyse
+        std::string fCollectionName = "ECalBarrelCollection";
         /// ID of a hit collection to analyse
         G4int fHitCollectionID = -1;
         /// Size of cell along Z axis

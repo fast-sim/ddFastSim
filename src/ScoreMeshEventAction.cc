@@ -20,6 +20,7 @@ dd4hep::sim::ScoreMeshEventAction::ScoreMeshEventAction(dd4hep::sim::Geant4Conte
     declareProperty("sizeOfRhoCells", fCellSizeRho = 2.325 );
     declareProperty("sizeOfPhiCells", fCellSizePhi = 2 * CLHEP::pi / 50. );
     declareProperty("sizeOfZCells", fCellSizeZ = 5.05 );
+    declareProperty("collectionName", fCollectionName = "ECalBarrelCollection" );
   }
 
         /// Default destructor
@@ -43,7 +44,7 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
   // Get hits collection ID (only once)
   if(fHitCollectionID == -1)
   {
-    fHitCollectionID = G4SDManager::GetSDMpointer()->GetCollectionID("ECalBarrelCollection");
+    fHitCollectionID = G4SDManager::GetSDMpointer()->GetCollectionID(fCollectionName);
   }
   // Get hits collection
   auto hitsCollection =

@@ -5,6 +5,11 @@
 #include "DD4hep/InstanceCount.h"
 #include "G4Run.hh"
 
+namespace {
+bool sAnalysisConfigured = false;
+bool sAnalysisClosed = false;
+}
+
 /// Standard constructor with initializing arguments
 dd4hep::sim::ScoreMeshRunAction::ScoreMeshRunAction(dd4hep::sim::Geant4Context* c, const std::string& n):
         dd4hep::sim::Geant4RunAction(c, n) {
@@ -28,6 +33,11 @@ dd4hep::sim::ScoreMeshRunAction::ScoreMeshRunAction(dd4hep::sim::Geant4Context* 
 }
 /// begin-of-run callback
 void dd4hep::sim::ScoreMeshRunAction::begin(const G4Run*) {
+  if(sAnalysisConfigured) {
+    return;
+  }
+  fOwnsAnalysisOutput = true;
+  sAnalysisConfigured = true;
            // Get analysis manager
   G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
 
@@ -100,6 +110,10 @@ void dd4hep::sim::ScoreMeshRunAction::begin(const G4Run*) {
         }
 /// End-of-run callback
 void dd4hep::sim::ScoreMeshRunAction::end(const G4Run* aRun) {
+  if(!fOwnsAnalysisOutput || sAnalysisClosed) {
+    return;
+  }
+  sAnalysisClosed = true;
   fTimer.Stop();
   auto analysisManager = G4AnalysisManager::Instance();
   analysisManager->FillNtupleDColumn(2, 0, aRun->GetNumberOfEvent());

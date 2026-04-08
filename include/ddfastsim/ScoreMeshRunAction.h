@@ -35,6 +35,8 @@ class ScoreMeshRunAction: public dd4hep::sim::Geant4RunAction {
         private:
         /// Timer measurement from Geant4
         G4Timer fTimer;
+          /// Whether this instance owns the shared analysis output
+          bool fOwnsAnalysisOutput = false;
 
   // Get detector dimensions
   G4int cellNumZ       = 45;
