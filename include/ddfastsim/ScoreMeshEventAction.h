@@ -2,6 +2,7 @@
 #define SCOREMESHEVENTACTION_HH
 
 #include <G4Types.hh>            // for G4int, G4double
+#include <string>                // for string
 #include <vector>                // for vector
 #include "G4UserEventAction.hh"  // for G4UserEventAction
 #include "G4Timer.hh"            // for G4Timer
@@ -40,7 +41,7 @@ class G4Event;
         private:
         /// Timer measurement from Geant4
         G4Timer fTimer;
-        /// Name of the hit collection to analyse
+        /// Name of a hit collection to analyse
         std::string fCollectionName = "ECalBarrelCollection";
         /// ID of a hit collection to analyse
         G4int fHitCollectionID = -1;

@@ -1,0 +1,15 @@
+# all sizes are in mm, all numbers are dimensionless
+
+hcalMeshCellNumRho: 12
+hcalMeshCellNumPhi: 16
+hcalMeshCellNumZ: 60
+hcalMeshCellSizeRho: 30
+hcalMeshCellSizeZ: 30
+
+ecalMeshCellNumRho: 9
+ecalMeshCellNumPhi: 16
+ecalMeshCellNumZ: 45
+ecalMeshCellSizeRho: 4.65
+ecalMeshCellSizeZ: 5.05
+
+samplingFraction: 0.0255

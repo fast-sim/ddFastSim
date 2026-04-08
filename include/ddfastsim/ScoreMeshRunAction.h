@@ -35,7 +35,7 @@ class ScoreMeshRunAction: public dd4hep::sim::Geant4RunAction {
         private:
         /// Timer measurement from Geant4
         G4Timer fTimer;
-          /// Whether this instance owns the shared analysis output
+          /// Guard shared analysis output ownership across multiple instances
           bool fOwnsAnalysisOutput = false;
 
   // Get detector dimensions

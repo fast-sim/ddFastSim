@@ -10,6 +10,7 @@ import DDG4
 from g4units import m, mm, GeV, MeV, rad, keV,TeV
 import os
 from math import pi
+import yaml
 
 SIM = DD4hepSimulation()
 
@@ -84,6 +85,19 @@ meshCellSizeRho = 4.65 * mm
 meshCellSizePhi = 2 * pi / meshCellNumPhi
 meshCellSizeZ = 5.05 * mm
 
+if "FCCcore" in os.environ:
+   with open(os.environ["FCCcore"]+"/options/ODD/mesh_parameters.yaml", 'r') as stream:
+      try:
+         mesh_parameters = yaml.safe_load(stream)
+         meshCellNumRho = mesh_parameters["ecalMeshCellNumRho"]
+         meshCellNumPhi = mesh_parameters["ecalMeshCellNumPhi"]
+         meshCellNumZ = mesh_parameters["ecalMeshCellNumZ"]
+         meshCellSizeRho = mesh_parameters["ecalMeshCellSizeRho"] * mm
+         meshCellSizePhi = 2 * pi / meshCellNumPhi
+         meshCellSizeZ = mesh_parameters["ecalMeshCellSizeZ"] * mm
+      except yaml.YAMLError as exc:
+         print(exc)
+
 # HCal mesh parameters
 hcalMeshCellNumRho = 12
 hcalMeshCellNumPhi = 16
@@ -92,6 +106,18 @@ hcalMeshCellSizeRho = 6.2 * mm
 hcalMeshCellSizePhi = 2 * pi / hcalMeshCellNumPhi
 hcalMeshCellSizeZ = 30.0 * mm
 
+if "FCCcore" in os.environ:
+   with open(os.environ["FCCcore"]+"/options/ODD/mesh_parameters.yaml", 'r') as stream:
+      try:
+         mesh_parameters = yaml.safe_load(stream)
+         hcalMeshCellNumRho = mesh_parameters["hcalMeshCellNumRho"]
+         hcalMeshCellNumPhi = mesh_parameters["hcalMeshCellNumPhi"]
+         hcalMeshCellNumZ = mesh_parameters["hcalMeshCellNumZ"]
+         hcalMeshCellSizeRho = mesh_parameters["hcalMeshCellSizeRho"] * mm
+         hcalMeshCellSizePhi = 2 * pi / hcalMeshCellNumPhi
+         hcalMeshCellSizeZ = mesh_parameters["hcalMeshCellSizeZ"] * mm
+      except yaml.YAMLError as exc:
+         print(exc)
 ##  create a map of patterns and actions to be applied to sensitive detectors
 ##  Assign different mesh parameters for ECal and HCal
 SIM.action.mapActions = {

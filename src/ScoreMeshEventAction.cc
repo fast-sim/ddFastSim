@@ -80,7 +80,7 @@ void dd4hep::sim::ScoreMeshEventAction::end(const G4Event* aEvent)
 
   std::cout << "[EventAction::end()] Event action: Num of phi x rho x z cells: " << fCellNbPhi << " x "
             << fCellNbRho << " x " << fCellNbZ << std::endl;
-  std::cout << "[EventAction::end()] Number of hits in a collection: " <<  hitsCollection->GetSize() << std::endl;
+  std::cout << "[EventAction::end()] Number of hits in " << fCollectionName << ": " << hitsCollection->GetSize() << std::endl;
 
   // Fill histograms
   dd4hep::sim::Geant4Calorimeter::Hit* hit                  = nullptr;

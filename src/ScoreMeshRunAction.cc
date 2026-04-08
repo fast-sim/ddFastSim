@@ -33,7 +33,7 @@ dd4hep::sim::ScoreMeshRunAction::ScoreMeshRunAction(dd4hep::sim::Geant4Context* 
 }
 /// begin-of-run callback
 void dd4hep::sim::ScoreMeshRunAction::begin(const G4Run*) {
-  if(sAnalysisConfigured) {
+  if (sAnalysisConfigured) {
     return;
   }
   fOwnsAnalysisOutput = true;
@@ -110,7 +110,7 @@ void dd4hep::sim::ScoreMeshRunAction::begin(const G4Run*) {
         }
 /// End-of-run callback
 void dd4hep::sim::ScoreMeshRunAction::end(const G4Run* aRun) {
-  if(!fOwnsAnalysisOutput || sAnalysisClosed) {
+  if (!fOwnsAnalysisOutput || sAnalysisClosed) {
     return;
   }
   sAnalysisClosed = true;
