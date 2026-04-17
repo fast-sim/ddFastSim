@@ -4,6 +4,8 @@
 #include "ddfastsim/ScoreMeshEventInformation.h"
 #include "G4EventManager.hh"
 #include "G4Event.hh"
+#include "G4PrimaryVertex.hh"
+#include "G4PrimaryParticle.hh"
 #include "DDG4/Geant4FastSimSpot.h"
 
 
@@ -61,8 +63,9 @@ namespace dd4hep {
 										Detector& lcdd_ref)
       : Geant4Sensitive(ctxt,nam,det,lcdd_ref), m_collectionID(0)
     {
+      declareProperty("CollectionName", m_collectionName);
+      declareProperty("ReadoutName",    m_readoutName);
       initialize();
-      defineCollections();
       InstanceCount::increment(this);
       declareProperty("numOfRhoCells", m_userData.numOfRhoCells = 18 );
       declareProperty("numOfZCells", m_userData.numOfZCells = 45 );
@@ -80,16 +83,22 @@ namespace dd4hep {
         return true;
 
       if(m_userData.entrancePosition.x() == -1) {
-        auto info = dynamic_cast<ScoreMeshEventInformation*>(
-              G4EventManager::GetEventManager()->GetConstCurrentEvent()->GetUserInformation());
-        if(info == nullptr)
-          return true;
-        m_userData.entrancePosition  = info->GetPosition();
-        m_userData.entranceDirection = info->GetDirection();
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] FOR READOUT " << m_sensitive.readout().name() << " Size of rho SD cell = " << m_userData.sizeOfRhoCells << std::endl;
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] Size of z SD cell = " << m_userData.sizeOfZCells << std::endl;
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] Entrance position = " << m_userData.entrancePosition << std::endl;
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] Entrance direction = " << m_userData.entranceDirection<< std::endl;
+        auto currentEvent = G4EventManager::GetEventManager()->GetConstCurrentEvent();
+        auto info = dynamic_cast<ScoreMeshEventInformation*>(currentEvent->GetUserInformation());
+        if(info != nullptr) {
+          m_userData.entrancePosition  = info->GetPosition();
+          m_userData.entranceDirection = info->GetDirection();
+        } else {
+          // Fallback when no DefineMeshModel is registered (e.g. the geometry
+          // doesn't define a G4Region covering ECal). Use the primary vertex.
+          auto primVtx = currentEvent->GetPrimaryVertex();
+          if(primVtx && primVtx->GetPrimary(0)) {
+            m_userData.entrancePosition  = primVtx->GetPosition();
+            m_userData.entranceDirection = primVtx->GetPrimary(0)->GetMomentumDirection();
+          } else {
+            return true;
+          }
+        }
       }
 
       auto delta = aStep->GetPostStepPoint()->GetPosition() - m_userData.entrancePosition;
