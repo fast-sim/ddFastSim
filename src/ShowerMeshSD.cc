@@ -1,5 +1,6 @@
 #include "DDG4/Geant4SensDetAction.inl"
 #include "DDG4/Geant4EventAction.h"
+#include "DDG4/Geant4Data.h"
 #include "ddfastsim/ScoreMeshEventInformation.h"
 #include "G4EventManager.hh"
 #include "G4Event.hh"
@@ -24,6 +25,10 @@ namespace dd4hep {
       /// Entrance data
       G4ThreeVector  entrancePosition = G4ThreeVector(-1,-1,-1);
       G4ThreeVector  entranceDirection = G4ThreeVector(-1,-1,-1);
+      /// If true, apply Birks' law quenching to step energy deposits
+      /// (matches Geant4ScintillatorCalorimeterAction). Default off for
+      /// backward compatibility.
+      bool ApplyBirksQuenching = false;
       Geant4ShowerMeshCalorimeter() : Geant4Calorimeter()
 				//	, _firstLayerNumber(1)
       {}
@@ -64,10 +69,13 @@ namespace dd4hep {
       declareProperty("sizeOfRhoCells", m_userData.sizeOfRhoCells = 2.325 );
       declareProperty("sizeOfPhiCells", m_userData.sizeOfPhiCells = 2 * CLHEP::pi / 50. );
       declareProperty("sizeOfZCells", m_userData.sizeOfZCells = 5.05 );
+      declareProperty("ApplyBirksQuenching", m_userData.ApplyBirksQuenching = false );
     }
     /// Method for generating hit(s) using the information of G4Step object.
     template <> bool Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::process(const G4Step* aStep,G4TouchableHistory*) {
-      G4double edep = aStep->GetTotalEnergyDeposit();
+      G4double edep = m_userData.ApplyBirksQuenching
+          ? Geant4HitData::extractContribution(aStep, true).deposit
+          : aStep->GetTotalEnergyDeposit();
       if(edep == 0.)
         return true;
 
