@@ -36,7 +36,10 @@ namespace dd4hep {
     };
     /// Define collections created by this sensitivie action object
     template <> void Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::defineCollections() {
-      m_collectionID = defineCollection<Geant4Calorimeter::Hit>(m_sensitive.readout().name());
+      const std::string coll = m_collectionName.empty()
+          ? m_sensitive.readout().name()
+          : m_collectionName;
+      m_collectionID = defineCollection<Geant4Calorimeter::Hit>(coll);
     }
     /// Initialization overload for specialization
     template <> void Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::initialize() {
