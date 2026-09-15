@@ -59,7 +59,7 @@ static dd4hep::Ref_t createPlanes(dd4hep::Detector& lcdd, xml_h xmlElement,
   sd.setType(sdType.typeStr());
 
   // loop over layers
-  double layerFacePosition = -dimensions.z()/2.+sliceOneThickness; /// Box is placed at origin
+  double layerFacePosition = -dimensions.z()/2.; /// Box is placed at origin, layers start at front face
   for (int iLayer = 0; iLayer < numLayers; iLayer++) {
     int sliceNumber = 0;
     for (xml_coll_t x_slice(layer, _Unicode(slice)); x_slice; ++x_slice) {
@@ -85,7 +85,7 @@ static dd4hep::Ref_t createPlanes(dd4hep::Detector& lcdd, xml_h xmlElement,
 
   // Place envelope (or barrel) volume
   Volume motherVol = lcdd.pickMotherVolume(eCal);
-  PlacedVolume placedECal = motherVol.placeVolume(envelopeVolume, 1, Position(0., 0., -dimensions.z()/2.));
+  PlacedVolume placedECal = motherVol.placeVolume(envelopeVolume, 1, Position(0., 0., dimensions.z()/2.));
   placedECal.addPhysVolID("system", eCal.id());
   eCal.setPlacement(placedECal);
   return eCal;

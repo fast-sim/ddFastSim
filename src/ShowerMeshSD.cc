@@ -1,8 +1,11 @@
 #include "DDG4/Geant4SensDetAction.inl"
 #include "DDG4/Geant4EventAction.h"
+#include "DDG4/Geant4Data.h"
 #include "ddfastsim/ScoreMeshEventInformation.h"
 #include "G4EventManager.hh"
 #include "G4Event.hh"
+#include "G4PrimaryVertex.hh"
+#include "G4PrimaryParticle.hh"
 #include "DDG4/Geant4FastSimSpot.h"
 
 
@@ -24,6 +27,10 @@ namespace dd4hep {
       /// Entrance data
       G4ThreeVector  entrancePosition = G4ThreeVector(-1,-1,-1);
       G4ThreeVector  entranceDirection = G4ThreeVector(-1,-1,-1);
+      /// If true, apply Birks' law quenching to step energy deposits
+      /// (matches Geant4ScintillatorCalorimeterAction). Default off for
+      /// backward compatibility.
+      bool ApplyBirksQuenching = false;
       Geant4ShowerMeshCalorimeter() : Geant4Calorimeter()
 				//	, _firstLayerNumber(1)
       {}
@@ -36,7 +43,10 @@ namespace dd4hep {
     };
     /// Define collections created by this sensitivie action object
     template <> void Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::defineCollections() {
-      m_collectionID = defineCollection<Geant4Calorimeter::Hit>(m_sensitive.readout().name());
+      const std::string coll = m_collectionName.empty()
+          ? m_sensitive.readout().name()
+          : m_collectionName;
+      m_collectionID = defineCollection<Geant4Calorimeter::Hit>(coll);
     }
     /// Initialization overload for specialization
     template <> void Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::initialize() {
@@ -53,32 +63,42 @@ namespace dd4hep {
 										Detector& lcdd_ref)
       : Geant4Sensitive(ctxt,nam,det,lcdd_ref), m_collectionID(0)
     {
+      declareProperty("CollectionName", m_collectionName);
+      declareProperty("ReadoutName",    m_readoutName);
       initialize();
-      defineCollections();
       InstanceCount::increment(this);
       declareProperty("numOfRhoCells", m_userData.numOfRhoCells = 18 );
       declareProperty("numOfZCells", m_userData.numOfZCells = 45 );
       declareProperty("sizeOfRhoCells", m_userData.sizeOfRhoCells = 2.325 );
       declareProperty("sizeOfPhiCells", m_userData.sizeOfPhiCells = 2 * CLHEP::pi / 50. );
       declareProperty("sizeOfZCells", m_userData.sizeOfZCells = 5.05 );
+      declareProperty("ApplyBirksQuenching", m_userData.ApplyBirksQuenching = false );
     }
     /// Method for generating hit(s) using the information of G4Step object.
     template <> bool Geant4SensitiveAction<Geant4ShowerMeshCalorimeter>::process(const G4Step* aStep,G4TouchableHistory*) {
-      G4double edep = aStep->GetTotalEnergyDeposit();
+      G4double edep = m_userData.ApplyBirksQuenching
+          ? Geant4HitData::extractContribution(aStep, true).deposit
+          : aStep->GetTotalEnergyDeposit();
       if(edep == 0.)
         return true;
 
       if(m_userData.entrancePosition.x() == -1) {
-        auto info = dynamic_cast<ScoreMeshEventInformation*>(
-              G4EventManager::GetEventManager()->GetConstCurrentEvent()->GetUserInformation());
-        if(info == nullptr)
-          return true;
-        m_userData.entrancePosition  = info->GetPosition();
-        m_userData.entranceDirection = info->GetDirection();
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] FOR READOUT " << m_sensitive.readout().name() << " Size of rho SD cell = " << m_userData.sizeOfRhoCells << std::endl;
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] Size of z SD cell = " << m_userData.sizeOfZCells << std::endl;
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] Entrance position = " << m_userData.entrancePosition << std::endl;
-        std::cout << "[SD::process(G4Step), entrance pos x == -1] Entrance direction = " << m_userData.entranceDirection<< std::endl;
+        auto currentEvent = G4EventManager::GetEventManager()->GetConstCurrentEvent();
+        auto info = dynamic_cast<ScoreMeshEventInformation*>(currentEvent->GetUserInformation());
+        if(info != nullptr) {
+          m_userData.entrancePosition  = info->GetPosition();
+          m_userData.entranceDirection = info->GetDirection();
+        } else {
+          // Fallback when no DefineMeshModel is registered (e.g. the geometry
+          // doesn't define a G4Region covering ECal). Use the primary vertex.
+          auto primVtx = currentEvent->GetPrimaryVertex();
+          if(primVtx && primVtx->GetPrimary(0)) {
+            m_userData.entrancePosition  = primVtx->GetPosition();
+            m_userData.entranceDirection = primVtx->GetPrimary(0)->GetMomentumDirection();
+          } else {
+            return true;
+          }
+        }
       }
 
       auto delta = aStep->GetPostStepPoint()->GetPosition() - m_userData.entrancePosition;

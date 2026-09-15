@@ -16,6 +16,9 @@ namespace dd4hep {
       /// Slice ID of the sensitive layer
       int fSensitiveEMSlice = 0;
       int fSensitiveHadSlice = 0;
+      /// Name of the cellID field used to identify the sensitive slice
+      /// Default "slice" works for SimpleBox; ALLEGRO uses "type"
+      std::string fSliceFieldName = "slice";
       Geant4FullFastCalorimeter() : Geant4Calorimeter() {}
     };
     /// Define collections created by this sensitivie action object
@@ -37,8 +40,9 @@ namespace dd4hep {
       InstanceCount::increment(this);
       declareProperty("sensitiveEMSlice", m_userData.fSensitiveEMSlice );
       declareProperty("sensitiveHadSlice", m_userData.fSensitiveHadSlice );
+      declareProperty("sliceFieldName", m_userData.fSliceFieldName );
       // TODO figure out from the DetType which detector is it: EM or Had.
-      // for the moment use only EM 
+      // for the moment use only EM
     }
     /// Method for generating hit(s) using the information of G4Step object.
     /// based on Geant4SensitiveAction<Geant4Calorimeter>::process from DDG4/plugins/Geant4SDActions.cpp
@@ -69,7 +73,7 @@ namespace dd4hep {
       }
 
       // For full simulation: proceed only if we entered a sensitive slice
-      if( ! (m_readout.idSpec().decoder()->get(cell, "slice") == m_userData.fSensitiveEMSlice) ) return true;
+      if( ! (m_readout.idSpec().decoder()->get(cell, m_userData.fSliceFieldName) == m_userData.fSensitiveEMSlice) ) return true;
 
       Hit* hit = coll->findByKey<Hit>(cell);
       if ( !hit ) {
