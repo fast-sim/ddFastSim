@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+"""Local plotting corrections for the LEMURS manuscript revision.
+
+Derived from ddfastsim v1.0.0, https://doi.org/10.5281/zenodo.17076360.
+Reads existing data only. See README.txt for scope and known limitations.
+"""
+import sys
 root_not_found=False
 try:
     from ROOT import RDataFrame, gSystem, gInterpreter
@@ -10,12 +17,67 @@ except ModuleNotFoundError:
 import h5py
 import random
 import numpy as np
+import os
+import matplotlib
+if not os.environ.get("DRAW_SHOW"):   # write files only; set DRAW_SHOW=1 to open windows
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.axes as _maxes
+
+# Legends: skip when there is nothing to label, use a smaller font, always top right,
+# and add headroom above the data so the legend box does not cover the histograms.
+_orig_legend = _maxes.Axes.legend
+def _legend_with_headroom(self, *args, **kwargs):
+    labels = [l for l in self.get_legend_handles_labels()[1] if l and not l.startswith("_")]
+    if not labels:
+        return None
+    lo, hi = self.get_ylim()
+    n = len(labels)
+    if self.get_yscale() == "log":
+        self.set_ylim(lo, hi * 10 ** (0.6 + 0.35 * n))
+    else:
+        self.set_ylim(lo, lo + (hi - lo) * (1.2 + 0.12 * n))
+    kwargs["loc"] = "upper right"
+    kwargs.setdefault("fontsize", "small")
+    kwargs.setdefault("framealpha", 0.9)
+    return _orig_legend(self, *args, **kwargs)
+_maxes.Axes.legend = _legend_with_headroom
+# Larger labels for figures reduced to manuscript width.
+plt.rcParams.update({
+    "font.size": 24, "axes.labelsize": 26, "axes.titlesize": 26,
+    "xtick.labelsize": 22, "ytick.labelsize": 22, "legend.fontsize": 20,
+    "savefig.dpi": 180, "savefig.bbox": "tight",
+})
 from math import pi,log10
 import argparse
 
-parser = argparse.ArgumentParser(description='Validation plots')
-parser.add_argument('--detector', '-d', help='Detector to simulate', choices=['Par04', 'ODD'], default="Par04")
+# Physical voxel widths for the released 6480-voxel representation,
+# from Table 1 of the submitted LEMURS manuscript (dr, dz), in mm.
+MESH_WIDTHS_MM = {
+    "Par04SiW": (4.65, 3.4),
+    "Par04SciPb": (8.0, 5.6),
+    "ODD": (4.65, 5.05),
+    "FCCeeCLD": (4.65, 5.05),
+    "FCCeeALLEGRO": (5.0, 11.0),
+}
+
+
+def mesh_parameters(detector, dataset):
+    """Return named mesh dimensions; reject unsupported combinations explicitly."""
+    detector = "Par04SiW" if detector == "Par04" else detector
+    if detector not in MESH_WIDTHS_MM:
+        raise ValueError(f"Unknown detector: {detector}")
+    dr, dz = MESH_WIDTHS_MM[detector]
+    if dataset == 2:
+        return detector, 9, 16, 45, dr, dz
+    if dataset == 3 and detector in ("Par04SiW", "ODD"):
+        # Explicit legacy option, not a claim of high-granularity LEMURS data.
+        return detector, 18, 50, 45, dr / 2, dz
+    raise ValueError("--dataset 3 is a legacy option supported only for Par04SiW and ODD; use --dataset 2 for released LEMURS files")
+
+
+parser = argparse.ArgumentParser(description='Plot existing shower files')
+parser.add_argument('--detector', '-d', help='Detector whose physical mesh widths apply (Par04 is an alias for Par04SiW)', choices=['Par04'] + list(MESH_WIDTHS_MM), default="Par04SiW")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument('--plotEratio', action='store_true')
 group.add_argument('--plotEdep', action='store_true')
@@ -55,37 +117,23 @@ if not args.infileH5:
     filename_h5 = []
 
 num_events = args.numEvents
-# datasets
+# The dataset argument is explicit; all released LEMURS files use dataset 2.
+try:
+    detector_tag, mesh_r, mesh_phi, mesh_z, mesh_dr, mesh_dz = mesh_parameters(args.detector, args.dataset)
+except ValueError as exc:
+    parser.error(str(exc))
 if args.dataset == 2:
-    legend_root = [args.detector+', ROOT dataset2']
+    legend_root = [detector_tag + ', ROOT dataset2']
     ifLowGran = True
-    num_phi_low = 16
-    num_z_low = 45
-    num_r_low = 9
+    num_r_low, num_phi_low, num_z_low = mesh_r, mesh_phi, mesh_z
+    size_r_low, size_z_low = mesh_dr, mesh_dz
     size_phi_low = 2*pi/num_phi_low
-    if args.detector == 'Par04':
-        # Values true for Par04 SiW
-        size_z_low = 3.4
-        size_r_low = 4.65
-    elif args.detector == 'ODD':
-        # Values true for ODD
-        size_z_low = 5.05
-        size_r_low = 4.65
-elif args.dataset == 3:
-    legend_root = [args.detector+', ROOT dataset3']
+else:
+    legend_root = [detector_tag + ', ROOT dataset3']
     ifLowGran = False
-    num_phi = 50
-    num_z = 45
-    num_r = 18
+    num_r, num_phi, num_z = mesh_r, mesh_phi, mesh_z
+    size_r, size_z = mesh_dr, mesh_dz
     size_phi = 2*pi/num_phi
-    if args.detector == 'Par04':
-        # Values true for Par04 SiW
-        size_z = 3.4
-        size_r = 2.325
-    elif args.detector == 'ODD':
-        # Values true for ODD
-        size_z_low = 5.05
-        size_r_low = 2.325
 
 
 if args.legendRoot:
@@ -173,7 +221,12 @@ for file_h5 in filename_h5:
             h5_phiMC_list.append(data['incident_phi'][:num_events])
             found_angle_phi = True
 
-        h5_showers_list.append(data['showers'][:num_events])
+        expected_shape = (mesh_r, mesh_phi, mesh_z)
+        if data['showers'].ndim != 4 or data['showers'].shape[1:] != expected_shape:
+            parser.error(f"{file_h5}: expected shower shape (S, {mesh_r}, {mesh_phi}, {mesh_z}) for --dataset {args.dataset}, got {data['showers'].shape}")
+        # Source-only plots do not need the potentially multi-gigabyte shower array.
+        if not args.plotIncident:
+            h5_showers_list.append(data['showers'][:num_events])
 
 def energy_ratio_root(fig, events, colour, label):
     ratios = []
@@ -297,7 +350,9 @@ def long_profile_hdf5(fig,showers, colour,label, lowGran = False):
     profile = np.sum(showers, axis=(1,2))
     mean_profile = np.mean(profile, axis=0)
     z_ids = np.linspace(0, numz-1, numz)
-    return fig.hist(z_ids, bins=z_ids, weights=mean_profile , facecolor=colour, alpha=0.4, label=label, density = False)
+    # One interval for each of the 45 discrete longitudinal layer indices.
+    z_edges = np.arange(numz + 1) - 0.5
+    return fig.hist(z_ids, bins=z_edges, weights=mean_profile , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def trans_profile_root(fig,events, colour,label, lowGran = False):
     if lowGran:
@@ -341,7 +396,8 @@ def trans_profile_hdf5(fig,showers, colour,label,lowGran=False):
     # Mean over all showers
     mean_radial_profile = np.mean(radial_profile_per_shower, axis=0)  # shape: (num_r,)
     r_axis = np.arange(numr) * sizer + sizer/2
-    r_axis_bins = np.arange(numr) * sizer
+    # N radial bins require N+1 edges; retain the outermost radial bin.
+    r_axis_bins = np.arange(numr + 1) * sizer
 
     return fig.hist(r_axis, bins=r_axis_bins, weights=mean_radial_profile , facecolor=colour, alpha=0.4, label=label, density = False)
 
@@ -370,7 +426,7 @@ def long_moments_root(fig_first, fig_second, events, colour, label,lowGran=False
         second = np.sum([pow(z_ids[i] * sizez - first, 2) * energies[i] for i in range(len(z_ids))])
         second /= sumG4
         all_second_moments.append(second)
-    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.4*numz*sizez, 32) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numz*sizez,2) / 35., 32) , facecolor=colour, alpha=0.4, label=label, density = False)
+    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.4*numz*sizez, 32) , facecolor=colour, alpha=0.4, label=label, density = False), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numz*sizez,2) / 35., 32) , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def long_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=False):
     if lowGran:
@@ -389,6 +445,7 @@ def long_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=Fals
         sizez = size_z
     profile = np.sum(showers, axis=(1,2))  # shape: (N_showers, numz)
 
+    # Preserve the archived index-scaled lower-edge convention.
     z_positions = np.linspace(0, numz - 1, numz) * sizez  # shape (numz,)
     # Total energy per shower
     total_energy = np.sum(profile, axis=1)[:, np.newaxis]  # shape: (N_showers, 1)
@@ -432,7 +489,7 @@ def trans_moments_root(fig_first, fig_second, events, colour, label, lowGran = F
         second = np.sum([pow(r_ids[i] * sizer - first, 2) * energies[i] for i in range(len(r_ids))])
         second /= sumG4
         all_second_moments.append(second)
-    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.75*numr*sizer,128) , facecolor=colour, alpha=0.4, label=label, density = True), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numr*sizer,2) / 8., 128) , facecolor=colour, alpha=0.4, label=label, density = True)
+    return fig_first.hist(all_first_moments, bins=np.linspace(0, 0.75*numr*sizer,128) , facecolor=colour, alpha=0.4, label=label, density = False), fig_second.hist(all_second_moments, bins=np.linspace(0, pow(numr*sizer,2) / 8., 128) , facecolor=colour, alpha=0.4, label=label, density = False)
 
 def trans_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=False):
     if lowGran:
@@ -451,6 +508,7 @@ def trans_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=Fal
         sizez = size_z
 
     # Radial positions in mm
+    # Preserve the archived index-scaled lower-edge convention.
     r_positions = np.linspace(0, numr - 1, numr) * sizer  # shape (numr,)
 
     # Sum over longitudinal (z) and angular (phi) directions to get transverse profile
@@ -467,7 +525,7 @@ def trans_moments_hdf5(fig_first, fig_second, showers, colour, label,lowGran=Fal
     second_moments = np.sum(profile * (r_positions - first_moments[:, np.newaxis])**2, axis=1) / total_energy[:,0]
 
     # Histograms (same bins as original transverse calculation)
-    fig1_hist = fig_first.hist(first_moments, bins=np.linspace(0, 0.4*numr*sizer, 32),
+    fig1_hist = fig_first.hist(first_moments, bins=np.linspace(0, 1.5*sizer, 61),  # finer range (R1, Fig. 13)
                                facecolor=colour, alpha=0.4, label=label, density=False)
     fig2_hist = fig_second.hist(second_moments, bins=np.linspace(0, (numr*sizer)**2 / 35., 32),
                                 facecolor=colour, alpha=0.4, label=label, density=False)
@@ -479,8 +537,8 @@ def plot_cell_energy():
     for it in range(len(events_list)):
         cell_energy_root(ax1,events_list[it],colours[it],legend_root[it])
     ax1.set_xlabel('E (MeV)')
-    ax1.set_ylabel('Entries')
-    ax1.set_title('Cell energy distribution')
+    ax1.set_ylabel('Probability density')
+    ax1.set_title('Voxel energy distribution')
     ax1.grid(True, which='both')
     ax1.legend()
     fig1.tight_layout()
@@ -504,8 +562,8 @@ def plot_cell_log_energy():
     ax1.set_xlabel('log10(E/MeV)')
  #   ax1.set_ylim(bottom=1e-6)
     ax1.set_yscale('log')
-    ax1.set_ylabel('Entries')
-    ax1.set_title('Cell energy distribution')
+    ax1.set_ylabel('Probability density')
+    ax1.set_title('Voxel energy distribution')
     ax1.grid(True)
     ax1.legend()
     if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
@@ -545,9 +603,9 @@ def plot_num_cells():
         mean_numcells_h5, (vals, edges, _) = num_cells_hdf5(ax3,h5_showers_list[it],colours[it+len(events_list)],legend_h5[it])
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
-    ax3.set_xlabel('number of cells')
-    ax3.set_ylabel('Entries')
-    ax3.set_title('Number of cells with E>0.5 keV')
+    ax3.set_xlabel('Number of nonzero voxels')
+    ax3.set_ylabel('Probability density')
+    ax3.set_title('Number of nonzero voxels')
     ax3.grid(True)
     ax3.legend()
     if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
@@ -589,8 +647,8 @@ def plot_energy_deposited():
         ax4.axvline(mean_edep_hdf5, color=colours[it+len(events_list)], linestyle='dashed', linewidth=1, label=fr"<E> = {mean_edep_hdf5:.2f}")
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
-    ax4.set_xlabel('$E_{dep}$')
-    ax4.set_ylabel('Normalized entries')
+    ax4.set_xlabel(r'$E_{\mathrm{dep}}$ (MeV)')
+    ax4.set_ylabel('Probability density')
     ax4.set_title('Energy deposited')
     ax4.grid(True)
     ax4.legend()
@@ -624,17 +682,17 @@ def plot_energy_ratio():
     edges_of_bins_x1 = []
     for it in range(len(events_list)):
         mean_eratio_root, (vals, edges, _) = energy_ratio_root(ax4,events_list[it],colours[it], legend_root[it])
-        ax4.axvline(mean_eratio_root, color=colours[it], linestyle='dashed', linewidth=1, label=fr"<E> = {mean_eratio_root:.2f}")
+        ax4.axvline(mean_eratio_root, color=colours[it], linestyle='dashed', linewidth=1, label=fr"$\langle f\rangle = {mean_eratio_root:.5f}$")
         val_of_bins_x1.append(vals)
         edges_of_bins_x1.append(edges)
     for it in range(len(h5_eMC_list)):
         mean_eratio_hdf5, ratios = energy_ratio_hdf5(ax4, h5_eMC_list[it], h5_showers_list[it], colours[it+len(events_list)], legend_h5[it])
-        ax4.axvline(mean_eratio_hdf5, color=colours[it+len(events_list)], linestyle='dashed', linewidth=1, label=fr"<E> = {mean_eratio_hdf5:.2f}")
+        ax4.axvline(mean_eratio_hdf5, color=colours[it+len(events_list)], linestyle='dashed', linewidth=1, label=fr"$\langle f\rangle = {mean_eratio_hdf5:.5f}$")
         val_of_bins_x1.append(ratios)
         edges_of_bins_x1.append(np.linspace(0., 1.2, 200))
-    ax4.set_xlabel('$E_{dep} / E_{MC}$')
-    ax4.set_ylabel('Normalized entries')
-    ax4.set_title('Ratio of energy deposited to incident')
+    ax4.set_xlabel(r'$f = E_{\mathrm{dep}} / E_{\mathrm{MC}}$')
+    ax4.set_ylabel('Probability density')
+    ax4.set_title('Deposited to incident energy ratio')
     ax4.grid(True)
     ax4.legend()
     if len(events_list)+len(h5_eMC_list) > 1 and not args.noRatio:
@@ -749,7 +807,7 @@ def plot_incident():
             (vals, edges, _) = axP.hist(h5_phiMC_list[it], bins = np.linspace(-pi,pi,30), facecolor=colours[it+len(events_list)], alpha=0.4,label=legend_h5[it])
             val_of_bins_P.append(vals)
             edges_of_bins_P.append(edges)
-        axP.set_xlabel('$\phi_{MC}$ (rad)')
+        axP.set_xlabel(r'$\phi_{MC}$ (rad)')
         axP.set_ylim(bottom=1)
         axP.set_yscale('log')
         axP.set_ylabel('Entries')
@@ -802,18 +860,18 @@ def plot_longitudinal():
         edges_of_bins2_x1.append(edges2)
         val_of_bins3_x1.append(vals3)
         edges_of_bins3_x1.append(edges3)
-    ax5a.set_xlabel('z (ID)')
+    ax5a.set_xlabel('Longitudinal layer index')
     ax5a.set_ylabel(r'$\langle E \rangle$ (MeV)')
     ax5a.set_title('Longitudinal profile')
     ax5a.grid(True)
     ax5a.legend()
     fig5.tight_layout()
-    ax5b.set_xlabel(r'$\langle\lambda\rangle$ (mm)')
+    ax5b.set_xlabel(r'$\overline{z}$ (mm)')
     ax5b.set_ylabel('Entries')
     ax5b.set_title('Longitudinal first moment')
-    ax5c.set_xlabel(r'$\langle\lambda^{2}\rangle$ (mm^{2})')
+    ax5c.set_xlabel(r'$\sigma_z^2$ (mm$^2$)')
     ax5c.set_ylabel('Entries')
-    ax5c.set_title('Longitudinal second moment')
+    ax5c.set_title('Longitudinal variance')
     ax5b.grid(True)
     ax5c.grid(True)
     ax5b.legend()
@@ -891,17 +949,17 @@ def plot_transverse():
         edges_of_bins2_x1.append(edges2)
         val_of_bins3_x1.append(vals3)
         edges_of_bins3_x1.append(edges3)
-    ax6a.set_xlabel('r (ID)')
-    ax6a.set_ylabel(r'$\langle E \rangle$ (MeV')
+    ax6a.set_xlabel('r (mm)')
+    ax6a.set_ylabel(r'$\langle E \rangle$ (MeV)')
     ax6a.set_title('Transverse profile')
     ax6a.set_yscale('log')
     ax6a.grid(True)
-    ax6b.set_xlabel(r'$\langle r\rangle$ (mm)')
+    ax6b.set_xlabel(r'$\overline{r}$ (mm)')
     ax6b.set_ylabel('Entries')
     ax6b.set_title('Transverse first moment')
-    ax6c.set_xlabel(r'$\langle r^{2}\rangle$(mm^{2})')
+    ax6c.set_xlabel(r'$\sigma_r^2$ (mm$^2$)')
     ax6c.set_ylabel('Entries')
-    ax6c.set_title('Transverse second moment')
+    ax6c.set_title('Transverse variance')
     ax6b.grid(True)
     ax6c.grid(True)
     ax6a.legend()
