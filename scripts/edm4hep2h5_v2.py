@@ -5,7 +5,8 @@ Four original datasets only: showers (S,9,16,45), incident_energy, incident_thet
 incident_phi; float32, MeV/radians, gzip 9. Selection uses primary endpoint plus
 EARLY saved-secondary vertices, NOT MCParticles.size()==1. See LEMURS_v2_README.md.
 Streams TTree entries and bounded HDF5 batches; no RDataFrame/AsNumpy.
-A small hit-projection helper is compiled once; --python-hits avoids this too.
+Hit copying is always scalar/indexed Python: no custom C++ compilation and no
+ROOT-vector-to-NumPy conversion. PyROOT itself still uses runtime bindings.
 A small .selection.npz stores scalar diagnostics for ALL original ROOT rows, so
 plots can compare inclusive, numMC==1, and v2 on exactly the same original events.
 """
@@ -20,11 +21,12 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import traceback
 
 import h5py
 import numpy as np
 
-VERSION = 'lemurs-v2-converter-1.0'
+VERSION = 'lemurs-v2-converter-1.0.1'
 GEOMETRY_COMMIT = 'a25ddc8d9bcfd5610e389cda487d3f00172e9443'
 # Frozen from the uploaded k4geo-FastSim archive, NOT current upstream master.
 # ALLEGRO barrel region includes the cryostat: 2100+49 = 2149 mm.
@@ -132,8 +134,12 @@ def project_hits(hits, shape, sampling_fraction):
     seen = set()
     outside = 0
     outside_energy = 0.
-    for hit in hits:
-        xyz = (float(hit.position.x), float(hit.position.y), float(hit.position.z))
+    # Index the C++ collection explicitly. Never pass a PyROOT vector/proxy
+    # to NumPy and do not construct a C++ iterator for each event.
+    for hit_index in range(len(hits)):
+        hit = hits[hit_index]
+        position = hit.position
+        xyz = (float(position.x), float(position.y), float(position.z))
         if not all(math.isfinite(a) for a in xyz):
             raise ValueError('Nonfinite voxel index')
         index = tuple(int(a) for a in xyz)
@@ -158,65 +164,46 @@ def project_hits(hits, shape, sampling_fraction):
 
 
 
-# Compile once, not per event or per batch. No full-file ROOT result vectors.
-CPP_PROJECTOR = r"""
-#include <vector>
-#include <cmath>
-#include <stdexcept>
-#include <cstddef>
-namespace lemurs_v2_projector {
-struct Result {
-    std::vector<float> grid;
-    unsigned long long outside = 0;
-    double outside_energy = 0.;
-};
-template<class Hits>
-Result project(const Hits& hits, int nr, int nphi, int nz, double sf) {
-    Result out;
-    const std::size_t cells = static_cast<std::size_t>(nr)*nphi*nz;
-    out.grid.assign(cells,0.f);
-    std::vector<unsigned char> seen(cells,0);
-    for (const auto& hit : hits) {
-        const double coordinates[3] = {hit.position.x,hit.position.y,hit.position.z};
-        const int limits[3] = {nr,nphi,nz};
-        int index[3];
-        bool outside=false;
-        for (int k=0;k<3;++k) {
-            const double v=coordinates[k];
-            if (!std::isfinite(v) || v<0. || v>2147483646.)
-                throw std::runtime_error("Nonfinite, negative or excessive voxel index");
-            index[k]=static_cast<int>(v);
-            if (std::abs(v-index[k])>1.e-5)
-                throw std::runtime_error("Fractional voxel index");
-            if (index[k]>=limits[k]) outside=true;
-        }
-        const float energy=static_cast<float>(hit.energy*1.e3);
-        const float value=static_cast<float>(energy/sf);
-        if (!std::isfinite(energy) || !std::isfinite(value) || energy<0.)
-            throw std::runtime_error("Invalid voxel energy");
-        if (outside) { ++out.outside; out.outside_energy+=value; continue; }
-        const std::size_t flat=(static_cast<std::size_t>(index[0])*nphi+index[1])*nz+index[2];
-        if (seen[flat]) throw std::runtime_error("Duplicate voxel index; inspect input");
-        seen[flat]=1;
-        out.grid[flat]=value;
-    }
-    return out;
-}
-}
-"""
+def root_projector(ROOT, python_only=True):
+    """Compatibility entry point; the scalar projector is now always selected.
+
+    ROOT 6.28-era vector array interfaces may enter Cling on conversion. Removing
+    that interface also avoids errors cascading from a failed buffer-pointer
+    lookup. This does not disable PyROOT's own binding machinery.
+    """
+    return project_hits
 
 
-def root_projector(ROOT, python_only):
-    if python_only:
-        return project_hits
-    if not ROOT.gInterpreter.Declare(CPP_PROJECTOR):
-        raise RuntimeError('Hit helper compilation failed. Start a NEW process with --python-hits.')
-    def project(hits, shape, sf):
-        result=ROOT.lemurs_v2_projector.project(hits,*shape,sf)
-        # Copy before the C++ Result/proxy goes out of scope: never retain a dangling view.
-        array=np.asarray(result.grid,dtype=np.float32).copy().reshape(shape)
-        return array,int(result.outside),float(result.outside_energy)
-    return project
+def memory_snapshot():
+    """Best-effort process diagnostics; no ROOT calls and no Linux requirement."""
+    info = {}
+    try:
+        for line in Path('/proc/self/status').read_text().splitlines():
+            key, _, value = line.partition(':')
+            if key in ('VmPeak', 'VmSize', 'VmHWM', 'VmRSS'):
+                info[key] = value.strip()
+    except OSError:
+        pass
+    try:
+        with open('/proc/self/maps') as f:
+            info['mapped_regions'] = sum(1 for _ in f)
+        info['vm_max_map_count'] = int(Path('/proc/sys/vm/max_map_count').read_text())
+    except (OSError, ValueError):
+        pass
+    try:
+        import resource
+        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+        info['address_space_soft_limit_bytes'] = None if soft == resource.RLIM_INFINITY else soft
+        info['address_space_hard_limit_bytes'] = None if hard == resource.RLIM_INFINITY else hard
+    except (ImportError, AttributeError, OSError, ValueError):
+        pass
+    return info
+
+
+def log_memory(stage):
+    info = memory_snapshot()
+    print(stage + ': ' + json.dumps(info, sort_keys=True), flush=True)
+    return info
 
 
 def fingerprint(path):
@@ -276,7 +263,7 @@ def convert(args):
     g = GEOMETRIES[args.detector]
     settings = dict(detector=args.detector, geometry=g, geometry_source_commit=GEOMETRY_COMMIT,
                     shape=[args.numR,args.numPhi,args.numZ], collection=args.collection,
-                    sampling_fraction=args.samplingFraction, hit_projection=('python' if args.python_hits else 'small_cpp_helper'),
+                    sampling_fraction=args.samplingFraction, hit_projection='python_scalar_indexed',
                     boundary_margin_mm=args.boundary_margin_mm, time_margin_ns=args.time_margin_ns,
                     script_sha256=code_hash())
     if any(p.exists() for p in (out,cache,report)):
@@ -291,10 +278,13 @@ def convert(args):
     tmp = {p:p.with_name(p.name+'.partial') for p in (out,cache,report)}
     if any(p.exists() for p in tmp.values()):
         raise FileExistsError('A .partial file exists; inspect/remove failed temporary outputs before retrying')
+    print('Converter ' + VERSION + ': scalar/indexed hit copying; no custom JIT helper', flush=True)
+    log_memory('Before ROOT import')
     import ROOT
     ROOT.gROOT.SetBatch(True)
     if hasattr(ROOT,'IsImplicitMTEnabled') and ROOT.IsImplicitMTEnabled():
         ROOT.DisableImplicitMT()
+    log_memory('After ROOT import')
     rf = ROOT.TFile.Open(str(source),'READ')
     if not rf or rf.IsZombie():
         raise OSError('ROOT could not open '+str(source))
@@ -310,7 +300,7 @@ def convert(args):
             tree.SetBranchStatus(branch,1)
             tree.SetBranchStatus(branch+'*',1)
         tree.SetCacheSize(8*1024*1024)
-        projector = root_projector(ROOT,args.python_hits)
+        projector = project_hits
         n = int(tree.GetEntries())
         if n == 0:
             raise ValueError('Empty input tree')
@@ -337,35 +327,41 @@ def convert(args):
             for row in range(n):
                 if int(tree.GetEntry(row)) <= 0:
                     raise OSError('ROOT read failed at row '+str(row))
-                particles = getattr(tree,'MCParticles')
-                d['nmc'][row] = len(particles)
-                reason = classify(particles,g,args.boundary_margin_mm,args.time_margin_ns)
-                d['reason'][row] = reason
-                if len(particles):
-                    p = particles[0]
-                    px,py,pz = float(p.momentum.x),float(p.momentum.y),float(p.momentum.z)
-                    norm = math.sqrt(px*px+py*py+pz*pz)
-                    if norm>0 and math.isfinite(norm):
-                        d['incident_energy_MeV'][row] = norm*1000.
-                        d['incident_theta'][row] = math.atan2(math.hypot(px,py),pz)
-                        d['incident_phi'][row] = math.atan2(py,px)
-                    for axis in ('x','y','z'):
-                        d['endpoint_'+axis+'_mm'][row] = float(getattr(p.endpoint,axis))
-                shower,outside,escaped = projector(getattr(tree,args.collection),shape,args.samplingFraction)
-                d['etot_MeV'][row] = shower.sum(dtype=np.float64)
-                outside_count += outside; outside_energy += escaped; outside_events += int(outside>0)
-                if reason == 0:
-                    vals = [d[k][row] for k in ('incident_energy_MeV','incident_theta','incident_phi')]
-                    if not all(np.isfinite(x) for x in vals) or vals[0] <= 0:
-                        raise ValueError('Invalid stored conditioning at row '+str(row))
-                    grids[used] = shower
-                    conditions[used] = vals
-                    used += 1
-                    if used == args.batch_size:
-                        append_batch(h5,grids,conditions,used); used = 0
-                if (row+1)%5000==0 or row+1==n:
-                    print(f'{source.name}: {row+1}/{n}; written {h5["showers"].shape[0]+used}',flush=True)
-                del particles, shower
+                try:
+                    particles = getattr(tree,'MCParticles')
+                    d['nmc'][row] = len(particles)
+                    reason = classify(particles,g,args.boundary_margin_mm,args.time_margin_ns)
+                    d['reason'][row] = reason
+                    if len(particles):
+                        p = particles[0]
+                        px,py,pz = float(p.momentum.x),float(p.momentum.y),float(p.momentum.z)
+                        norm = math.sqrt(px*px+py*py+pz*pz)
+                        if norm>0 and math.isfinite(norm):
+                            d['incident_energy_MeV'][row] = norm*1000.
+                            d['incident_theta'][row] = math.atan2(math.hypot(px,py),pz)
+                            d['incident_phi'][row] = math.atan2(py,px)
+                        for axis in ('x','y','z'):
+                            d['endpoint_'+axis+'_mm'][row] = float(getattr(p.endpoint,axis))
+                    shower,outside,escaped = projector(getattr(tree,args.collection),shape,args.samplingFraction)
+                    d['etot_MeV'][row] = shower.sum(dtype=np.float64)
+                    outside_count += outside; outside_energy += escaped; outside_events += int(outside>0)
+                    if reason == 0:
+                        vals = [d[k][row] for k in ('incident_energy_MeV','incident_theta','incident_phi')]
+                        if not all(np.isfinite(x) for x in vals) or vals[0] <= 0:
+                            raise ValueError('Invalid stored conditioning at row '+str(row))
+                        grids[used] = shower
+                        conditions[used] = vals
+                        used += 1
+                        if used == args.batch_size:
+                            append_batch(h5,grids,conditions,used); used = 0
+                    if row == 0 or (row+1)%args.progress_every==0 or row+1==n:
+                        print(f'{source.name}: {row+1}/{n}; written {h5["showers"].shape[0]+used}',flush=True)
+                        log_memory('Process resources')
+                    del particles, shower
+                except Exception as exc:
+                    raise RuntimeError(
+                        f'Conversion failed at ROOT row {row} (0-based), source {source.name}: {exc}'
+                    ) from exc
             append_batch(h5,grids,conditions,used)
             new = d['reason']==0; old = d['nmc']==1
             if h5['showers'].shape[0] != int(new.sum()):
@@ -374,7 +370,7 @@ def convert(args):
                 raise RuntimeError('ROOT input changed during conversion')
             summary = dict(status='complete', version=VERSION,
                 created_utc=datetime.now(timezone.utc).isoformat(), input=before, settings=settings,
-                git=git_info(), software=dict(ROOT=ROOT.gROOT.GetVersion(),numpy=np.__version__,
+                git=git_info(), resources_at_end=memory_snapshot(), software=dict(ROOT=ROOT.gROOT.GetVersion(),numpy=np.__version__,
                 h5py=h5py.__version__,python=sys.version.split()[0]),
                 output_file=str(out), diagnostic_cache=str(cache), total_events=n,
                 new_kept=int(new.sum()), old_numMC1_kept=int(old.sum()),
@@ -419,10 +415,13 @@ def parse_args(argv=None):
     p.add_argument('--boundary-margin-mm',type=float,default=1.)
     p.add_argument('--time-margin-ns',type=float,default=.1)
     p.add_argument('--batch-size',type=int,default=64)
-    p.add_argument('--python-hits',action='store_true',help='Slower pure-Python hit loop; avoid the small C++ helper')
+    p.add_argument('--python-hits',action='store_true',default=True,
+                   help='Compatibility flag: scalar/indexed hit copying is now always used')
+    p.add_argument('--progress-every',type=int,default=1000,
+                   help='Print progress and process memory diagnostics every N events (default 1000)')
     p.add_argument('--skip-existing',action='store_true',help='Skip ONLY a complete output with identical input and code/settings')
     a=p.parse_args(argv)
-    if min(a.numR,a.numPhi,a.numZ,a.batch_size)<=0: p.error('Dimensions/batch must be positive')
+    if min(a.numR,a.numPhi,a.numZ,a.batch_size,a.progress_every)<=0: p.error('Dimensions/batch/progress interval must be positive')
     if not math.isfinite(a.samplingFraction) or a.samplingFraction<=0: p.error('Invalid samplingFraction')
     if not 0<=a.boundary_margin_mm<100 or not 0<=a.time_margin_ns<100: p.error('Invalid margins')
     return a
@@ -431,6 +430,8 @@ def parse_args(argv=None):
 if __name__=='__main__':
     try:
         convert(parse_args())
-    except (OSError,ValueError,RuntimeError,ImportError) as e:
+    except Exception as e:
         print('ERROR: '+str(e),file=sys.stderr)
+        print('Process resources: '+json.dumps(memory_snapshot(),sort_keys=True),file=sys.stderr)
+        traceback.print_exc()
         sys.exit(1)

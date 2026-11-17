@@ -176,7 +176,8 @@ class ConversionTests(unittest.TestCase):
             a=converter.parse_args(['-i',str(p),'-o',str(Path(t)/'out'),
                                    '--detector','ALLEGRO','--output-name','part1_v2.h5','--python-hits'])
             with patch.dict(sys.modules,{'ROOT':fake_root([([photon()],[hit(),hit()])])}):
-                with self.assertRaises(ValueError): converter.convert(a)
+                with self.assertRaisesRegex(RuntimeError, "ROOT row 0.*Duplicate voxel"):
+                    converter.convert(a)
             self.assertFalse((Path(t)/'out/part1_v2.h5').exists())
             self.assertTrue((Path(t)/'out/part1_v2.h5.partial').exists())
 
@@ -190,5 +191,55 @@ class RepositoryLayoutTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('--outdir', result.stdout)
 
+
+
+class ScalarOnlySequence:
+    """A proxy that fails on iteration or array-interface access."""
+    def __init__(self, values): self.values = values
+    def __len__(self): return len(self.values)
+    def __getitem__(self, i): return self.values[i]
+    def __iter__(self): raise AssertionError('Must use indexed scalar reads')
+    @property
+    def __array_interface__(self):
+        raise AssertionError('Must not request a C++/NumPy array interface')
+
+
+class StreamingRegressionTests(unittest.TestCase):
+    def test_default_never_uses_interpreter(self):
+        class ForbiddenROOT:
+            def __getattr__(self, name):
+                raise AssertionError('ROOT helper unexpectedly used: ' + name)
+        self.assertIs(converter.root_projector(ForbiddenROOT(), False), converter.project_hits)
+
+    def test_scalar_proxy_only(self):
+        hits=ScalarOnlySequence([hit((8,15,44),.002),hit((0,0,0),.001)])
+        grid,n,e=converter.project_hits(hits,(9,16,45),1.)
+        self.assertEqual((grid.sum(),n,e),(3.,0,0.))
+        particles=ScalarOnlySequence([photon(),secondary(time=400)])
+        self.assertEqual(converter.classify(particles,converter.GEOMETRIES['CLD']),0)
+
+    def test_cli_default_and_compatibility_flag(self):
+        for extra in ([], ['--python-hits']):
+            args=converter.parse_args(['-i','x.root','-o','out','--detector','CLD']+extra)
+            self.assertTrue(args.python_hits)
+            self.assertEqual(args.batch_size,64)
+
+    def test_conversion_works_without_opt_in_flag_or_interpreter(self):
+        rows=[(ScalarOnlySequence([photon()]),ScalarOnlySequence([hit((8,15,44),.002)]))]
+        with tempfile.TemporaryDirectory() as t:
+            src=Path(t)/'source.root';src.write_bytes(b'mock')
+            args=converter.parse_args(['-i',str(src),'-o',str(Path(t)/'out'),
+                                      '--detector','CLD','--output-name','part1_v2.h5'])
+            with patch.dict(sys.modules,{'ROOT':fake_root(rows)}), contextlib.redirect_stdout(io.StringIO()):
+                converter.convert(args)
+            with h5py.File(Path(t)/'out/part1_v2.h5','r') as f:
+                self.assertEqual(f['showers'][0,8,15,44],2.)
+                self.assertTrue(f.attrs['conversion_complete'])
+            report=json.loads((Path(t)/'out/part1_v2.json').read_text())
+            self.assertEqual(report['version'],'lemurs-v2-converter-1.0.1')
+            self.assertEqual(report['settings']['hit_projection'],'python_scalar_indexed')
+
+    def test_resource_diagnostics_serializable(self):
+        json.dumps(converter.memory_snapshot(),allow_nan=False)
 
 if __name__=='__main__': unittest.main()
