@@ -73,12 +73,33 @@ def style_axis(ax):
 
 
 def save_page(fig, output_base):
-    pdf = output_base.with_suffix(".pdf")
     png = output_base.with_suffix(".png")
-    fig.savefig(pdf)
     fig.savefig(png, dpi=300)
     plt.close(fig)
-    return pdf, png
+    return (png,)
+
+
+def fit_steps(ax):
+    # stairs can include zero in the axis bounds even with baseline=None.
+    heights = np.concatenate([step.get_data().values for step in ax.patches])
+    heights = heights[np.isfinite(heights)]
+    low, high = heights.min(), heights.max()
+    pad = 0.05 * ((high - low) or high or 1.)
+    ax.set_ylim(max(0., low - pad), high + pad)
+
+
+def draw_density(ax, values, bins, masks):
+    for index, (mask, colour) in enumerate(zip(masks, COLOURS)):
+        density = hist_density(values[mask], bins)
+        ax.stairs(density, bins, color=colour, baseline=None,
+                  linewidth=2.2 if index == 0 else 1.35)
+        if index == 0:
+            inclusive = density
+    # Shade only the visible interval; zero is not a forced axis limit.
+    fit_steps(ax)
+    bottom = ax.get_ylim()[0]
+    ax.stairs(inclusive, bins, baseline=bottom, fill=True, color="0.85",
+              linewidth=0, zorder=0)
 
 
 def plot_selection_page(data, output_dir):
@@ -110,9 +131,7 @@ def plot_selection_page(data, output_dir):
     )
     for panel, (values, bins, xlabel, title) in enumerate(spectra):
         ax = axes[panel]
-        for mask, colour in zip(masks, COLOURS):
-            ax.stairs(hist_density(values[mask], bins), bins, color=colour,
-                      linewidth=1.35)
+        draw_density(ax, values, bins, masks)
         ax.set(xlabel=xlabel, ylabel="Density",
                title=f"({PANEL_LABELS[panel]}) {title}")
         style_axis(ax)
@@ -126,8 +145,9 @@ def plot_selection_page(data, output_dir):
             where=denominator > 0)
         ax.stairs(efficiency, energy_curve_bins, color=colour, linewidth=1.35,
                   baseline=None)
+    fit_steps(ax)
     ax.set(xlabel=r"Generated energy $E_{\rm gen}$ (GeV)",
-           ylabel="Retained / original events", ylim=(0., 1.025),
+           ylabel="Retained / original events",
            title="(d) Selection efficiency")
     style_axis(ax)
 
@@ -144,9 +164,7 @@ def plot_selection_page(data, output_dir):
     style_axis(ax)
 
     ax = axes[5]
-    for mask, colour in zip(masks, COLOURS):
-        ax.stairs(hist_density(response[mask], response_bins), response_bins,
-                  color=colour, linewidth=1.35)
+    draw_density(ax, response, response_bins, masks)
     ax.set(xlabel=r"$E_{\rm voxels}/E_{\rm gen}$", ylabel="Density",
            title="(f) Response distribution")
     style_axis(ax)
@@ -582,16 +600,13 @@ def run(args):
     output_dir = Path(args.outdir).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     expected_outputs = [
-        output_dir / "selection_validation_combined.pdf",
         output_dir / "selection_validation_combined.png",
-        output_dir / "particle_locations_combined.pdf",
         output_dir / "particle_locations_combined.png",
         output_dir / "combined_summary.json",
         output_dir / "captions.txt",
     ]
     if args.three_rules:
-        expected_outputs.extend(output_dir / f"particle_locations_three_rules.{ext}"
-                                for ext in ("pdf", "png"))
+        expected_outputs.append(output_dir / "particle_locations_three_rules.png")
     if not args.replace and any(path.exists() for path in expected_outputs):
         raise FileExistsError("Combined output exists; use --replace to regenerate plots")
 
